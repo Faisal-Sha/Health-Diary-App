@@ -1,0 +1,74 @@
+.calendar-section {
+    max-width: 600px;
+    margin: 0 auto 30px auto;
+  }
+  
+  .calendar-section h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+  }
+  
+  .calendar-day {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    border: 2px solid #ecf0f1;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-align: center;
+  }
+  
+  .calendar-day:hover {
+    border-color: #3498db;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .calendar-day.selected {
+    border-color: #3498db;
+    background: #ebf3fd;
+  }
+  
+  .calendar-date {
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 8px;
+  }
+  
+  .mood-indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin: 5px auto;
+  }
+  
+  .entry-count {
+    font-size: 0.9em;
+    color: #7f8c8d;
+  }
+  
+  .selected-day-entries {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .selected-day-entries h4 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+  }
+  
+  .entry-text {
+    color: #2c3e50;
+    line-height: 1.5;
+    font-size: 1em;
+  }

@@ -1,16 +1,25 @@
 import './App.css';
 import { useState } from 'react';
+import InputSection from './components/InputSection'; 
+import Summary from './components/Summary';
+import Calendar from './components/Calendar';
+import DiaryEntry from './components/DiaryEntry';
 
 function App() {
 
   const [diaryText, setDiaryText] = useState(''); //what the user types
   const [diaryEntries, setDiaryEntries] = useState([]); //all the diary entries
+  const [currentView, setCurrentView] = useState('list'); //track which view we are in: list or calendar
+  const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString()); //track which date we are looking at
 
 
+//will set later - for recording
   const handleRecordClick = () => {
     alert("Recording will start here!");
   }
 
+//extracting basics from text to create a noting diary
+//returns mood and symptoms
   const extractBasicInfo = (text) => {
     const lowerText = text.toLowerCase();
 
@@ -40,6 +49,18 @@ function App() {
     };
   }
 
+//Get entries for a specific date
+  const getEntriesForDate = (date) => {
+    return diaryEntries.filter(entry => entry.date === date)
+  }
+
+//get unique dates that have entries 
+  const getDatesWithEntries = () => {
+    const dates = diaryEntries.map(entry => entry.date)
+    return [...new Set(dates)];//removes duplicates
+  }
+
+//creating an entry object and adding it to diaryEntries array
   const handleSaveEntry = () => {
     if (diaryText.trim() === '') {
       alert("Please write something first!");
@@ -64,6 +85,7 @@ function App() {
 
   }
 
+//deleting entries
   const handleDeleteEntry = (entryId) => {
     setDiaryEntries(diaryEntries.filter(entry => entry.id !== entryId));
     alert("Entry Deleted!");
@@ -78,87 +100,61 @@ function App() {
       <h1>My Health Diary App</h1>
       <p>Welcome to your personal health tracker!</p>
 
-      <div className = "input-section">
-        <h3>How are you feeling today?</h3>
-        <textarea
-          className="diary-input"
-          value={diaryText}
-          onChange={(e) => setDiaryText(e.target.value)}
-          placeholder="Tell me about your day... How's your mood? Any pain? What did you eat?"
-          rows={4}
-        />
+      {/* Input Section for Entries*/}
+      <InputSection
+        diaryText = {diaryText}
+        onTextChange={setDiaryText}
+        onStartRecording={handleRecordClick}
+        onSaveEntry={handleSaveEntry}
+      />
+
+      {/* View toggle buttons */}
+      <div className="view-toggle">
+        <button 
+          className={currentView === 'list' ? 'view-btn active' : 'view-btn'}
+          onClick={() => setCurrentView('list')}
+        >📋 List View</button>
+        <button
+          className={currentView === 'calendar' ? 'view-btn active' : 'view-btn'}
+          onClick={() => setCurrentView('calendar')}
+        >📅 Calendar View</button>
       </div>
-
-      <button className="record-button" onClick={handleRecordClick}>
-        🎤 Start Recording
-      </button>
-
-      <button className="save-button" onClick={handleSaveEntry}>
-        💾 Save Entry
-      </button>
 
       {/* Show saved entries */}
       {diaryEntries.length > 0 && (
-        <div>
+        <>
 
-          {/*Quick Summary */}
-        <div className="summary-section">
-          <h3>Quick Summary</h3>
-          <div className="summary-stats">
-            <div className="stat">
-              <span className="stat-number">{diaryEntries.length}</span>
-              <span className="stat-label">Total Entries</span>
-            </div>
-            <div className="stat">
-              <span className="stat-number">
-                  {diaryEntries.filter(e => e.mood === 'positive').length}
-              </span>
-              <span className="stat-label">Good Days</span>
-            </div>
-            <div className="stat">
-              <span className="stat-number">
-                {diaryEntries.filter(e => e.symptoms.length > 0).length}
-              </span>
-              <span className="stat-label">Days with Symptoms</span>
-            </div>
-          </div>
-        </div>
-        
+        {/*Quick Summary */}
+          <Summary 
+            Entries = {diaryEntries}
+          />
+
+        {/* Calendar View Content*/}
+        {currentView === 'calendar' && (
+            <Calendar 
+              getDatesWithEntries = {getDatesWithEntries}
+              getEntriesForDate = {getEntriesForDate}
+              selectedDate = {selectedDate}
+              setSelectedDate = {setSelectedDate}
+              handleDeleteEntry = {handleDeleteEntry}
+            />
+          )}
+
+
         {/*Entries*/}
-        <div className="entries-section">
-          <h3>Your Recent Entries</h3>
-          {diaryEntries.map((entry) => (
-            <div key={entry.id} className="diary-entry">
-              <div className="entry-header">
-                <div className="entry-date-time">
-                  <span className="entry-date">{entry.date} </span>
-                  <span className="entry-time"> {entry.time}</span>
-                </div>
-                <button 
-                  className="delete-button"
-                  onClick={() => handleDeleteEntry(entry.id)}
-                >
-                  🗑️
-                </button>
-              </div>
-
-              {/*Show extracted Info*/} 
-              <div className="entry-tags">
-                <span className={`mood-tag mood-${entry.mood}`}>
-                  Mood: {entry.mood}
-                </span>
-                {entry.symptoms.length > 0 && (
-                    <span className="symptoms-tag">
-                      Symptoms: {entry.symptoms.join(', ')}
-                    </span>
-                )}
-              </div>
-
-              <div className="entry-text">{entry.text}</div>
-            </div>
-          ))}
-        </div>
-        </div>
+        {currentView === 'list' && (
+          <div className="entries-section">
+            <h3>Your Recent Entries</h3>
+            {diaryEntries.map((entry) => (
+              <DiaryEntry 
+                entry = {entry}
+                deleteEntry={handleDeleteEntry}
+              />
+            ))}
+          </div>
+        )}
+        
+        </>
       )}
     </div>
   );
