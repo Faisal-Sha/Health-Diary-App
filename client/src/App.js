@@ -14,9 +14,7 @@ function App() {
 
 
 //will set later - for recording
-  const handleRecordClick = () => {
-    alert("Recording will start here!");
-  }
+  
 
 //extracting basics from text to create a noting diary
 //returns mood and symptoms
@@ -104,7 +102,6 @@ function App() {
       <InputSection
         diaryText = {diaryText}
         onTextChange={setDiaryText}
-        onStartRecording={handleRecordClick}
         onSaveEntry={handleSaveEntry}
       />
 
@@ -141,7 +138,7 @@ function App() {
           )}
 
 
-        {/*Entries*/}
+        {/*List View Content*/}
         {currentView === 'list' && (
           <div className="entries-section">
             <h3>Your Recent Entries</h3>
