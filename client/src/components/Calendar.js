@@ -103,7 +103,13 @@ function Calendar({getDatesWithEntries, getEntriesForDate, selectedDate, setSele
 
                 {/* Calendar Days Grid */}
                 <div className="calendar-grid">
-                {calendarDays.map((day, index) => (
+                {calendarDays.map((day, index) => {
+                    // Create preview text for tooltip
+                    const previewText = day.hasEntries 
+                        ? `${day.entries.length} entries: ${day.entries[0].text.slice(0, 50)}${day.entries[0].text.length > 50 ? '...' : ''}`
+                        : '';
+                    
+                    return (
                         <div 
                             key={index}
                             className={`calendar-day 
@@ -114,6 +120,7 @@ function Calendar({getDatesWithEntries, getEntriesForDate, selectedDate, setSele
                                 mood-${day.averageMood}
                             `}
                             onClick={() => setSelectedDate(day.dateString)}
+                            title={previewText} // Native tooltip as fallback
                         >
                             <div className="day-number">
                                 {day.dayNumber}
@@ -131,7 +138,7 @@ function Calendar({getDatesWithEntries, getEntriesForDate, selectedDate, setSele
                                 </div>
                             )}
                         </div>
-                    ))}
+                    )})}
                 </div>
             </div>
 
