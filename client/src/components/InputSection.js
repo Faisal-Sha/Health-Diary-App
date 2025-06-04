@@ -137,7 +137,7 @@ function InputSection({diaryText, onTextChange, onSaveEntry}) {
             </div>
 
             <button className={getRecordingButtonClass()} disabled={isProcessing && !isRecording} onClick={isRecording ? stopRecording : startRecording}>{getRecordingButtonText()}</button>
-            <button className="save-button" onClick={onSaveEntry}>💾 Save Entry</button>
+            <button className="save-button" disabled ={isRecording} onClick={onSaveEntry}>💾 Save Entry</button>
         </>
         
     )
