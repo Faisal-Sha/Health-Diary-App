@@ -6,6 +6,10 @@ function Calendar({getDatesWithEntries, getEntriesForDate, selectedDate, setSele
 
     // State for current month/year being viewed
     const [currentDate, setCurrentDate] = useState(new Date());
+    
+    // NEW: State for view mode (month or week)
+    const [viewMode, setViewMode] = useState('month');
+    
     // Get current month and year
     const currentMonth = currentDate.getMonth();
     const currentYear = currentDate.getFullYear();
@@ -17,76 +21,170 @@ function Calendar({getDatesWithEntries, getEntriesForDate, selectedDate, setSele
 
     const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+    // UPDATED: Generate days based on view mode
     const calendarDays = useMemo(() => {
-        const firstDay = new Date(currentYear, currentMonth, 1);
-        const lastDay = new Date(currentYear, currentMonth + 1, 0);
-
-        const startDate = new Date(firstDay);
-        startDate.setDate(startDate.getDate() - firstDay.getDay());//start from Sunday
-
         const days = [];
         const today = new Date();
-
-        for (let i = 0; i < 42; i++) {
-            const date = new Date(startDate);
-            date.setDate(startDate.getDate() + i);
-
-            const dateString = date.toLocaleDateString();
-            const dayEntries = getEntriesForDate(dateString);
-
-            const isCurrentMonth = date.getMonth() === currentMonth;
-            const isToday = date.toDateString() === today.toDateString();
-            const isSelected = selectedDate === dateString;
-
-            let averageMood = 'neutral';
-            if (dayEntries.length > 0) {
-                const moodSum = dayEntries.reduce((sum, entry) => {
-                    return sum + (entry.mood === 'positive' ? 3 : entry.mood === 'negative' ? 1 : 2);
-                }, 0);
-                const avgScore = moodSum / dayEntries.length;
-                averageMood = avgScore > 2.5 ? 'positive' : avgScore < 1.5 ? 'negative' : 'neutral';
+        
+        if (viewMode === 'week') {
+            // WEEK VIEW: Generate 7 days for the current week
+            
+            // Find the Sunday of the week containing currentDate
+            const startOfWeek = new Date(currentDate);
+            startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+            
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(startOfWeek);
+                date.setDate(startOfWeek.getDate() + i);
+                
+                const dateString = date.toLocaleDateString();
+                const dayEntries = getEntriesForDate(dateString);
+                
+                const isCurrentMonth = date.getMonth() === currentMonth;
+                const isToday = date.toDateString() === today.toDateString();
+                const isSelected = selectedDate === dateString;
+                
+                // Calculate average mood
+                let averageMood = 'neutral';
+                if (dayEntries.length > 0) {
+                    const moodSum = dayEntries.reduce((sum, entry) => {
+                        return sum + (entry.mood === 'positive' ? 3 : entry.mood === 'negative' ? 1 : 2);
+                    }, 0);
+                    const avgScore = moodSum / dayEntries.length;
+                    averageMood = avgScore > 2.5 ? 'positive' : avgScore < 1.5 ? 'negative' : 'neutral';
+                }
+                
+                days.push({
+                    date: date,
+                    dateString: dateString,
+                    dayNumber: date.getDate(),
+                    entries: dayEntries,
+                    isCurrentMonth: isCurrentMonth,
+                    isToday: isToday,
+                    isSelected: isSelected,
+                    hasEntries: dayEntries.length > 0,
+                    averageMood: averageMood
+                });
             }
+            
+        } else {
+            // MONTH VIEW: Generate 42 days (existing logic)
+            
+            const firstDay = new Date(currentYear, currentMonth, 1);
+            const startDate = new Date(firstDay);
+            startDate.setDate(startDate.getDate() - firstDay.getDay()); // Start from Sunday
 
-            days.push({
-                date: date,
-                dateString: dateString,
-                dayNumber: date.getDate(),
-                entries: dayEntries,
-                isCurrentMonth: isCurrentMonth,
-                isToday: isToday,
-                isSelected: isSelected,
-                hasEntries: dayEntries.length > 0,
-                averageMood: averageMood
-            });
+            for (let i = 0; i < 42; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
 
+                const dateString = date.toLocaleDateString();
+                const dayEntries = getEntriesForDate(dateString);
+
+                const isCurrentMonth = date.getMonth() === currentMonth;
+                const isToday = date.toDateString() === today.toDateString();
+                const isSelected = selectedDate === dateString;
+
+                let averageMood = 'neutral';
+                if (dayEntries.length > 0) {
+                    const moodSum = dayEntries.reduce((sum, entry) => {
+                        return sum + (entry.mood === 'positive' ? 3 : entry.mood === 'negative' ? 1 : 2);
+                    }, 0);
+                    const avgScore = moodSum / dayEntries.length;
+                    averageMood = avgScore > 2.5 ? 'positive' : avgScore < 1.5 ? 'negative' : 'neutral';
+                }
+
+                days.push({
+                    date: date,
+                    dateString: dateString,
+                    dayNumber: date.getDate(),
+                    entries: dayEntries,
+                    isCurrentMonth: isCurrentMonth,
+                    isToday: isToday,
+                    isSelected: isSelected,
+                    hasEntries: dayEntries.length > 0,
+                    averageMood: averageMood
+                });
+            }
         }
-
+        
         return days;
-    }, [currentMonth, currentYear, getDatesWithEntries, getEntriesForDate, selectedDate]);
+    }, [currentMonth, currentYear, currentDate, viewMode, getDatesWithEntries, getEntriesForDate, selectedDate]);
 
-    const goToPreviousMonth = () => {
-        setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
-    }
+    // UPDATED: Navigation based on view mode
+    const goToPrevious = () => {
+        if (viewMode === 'week') {
+            // Go back 1 week (7 days)
+            const newDate = new Date(currentDate);
+            newDate.setDate(currentDate.getDate() - 7);
+            setCurrentDate(newDate);
+        } else {
+            // Go back 1 month
+            setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
+        }
+    };
 
-    const goToNextMonth = () => {
-        setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
-    }
+    const goToNext = () => {
+        if (viewMode === 'week') {
+            // Go forward 1 week (7 days)
+            const newDate = new Date(currentDate);
+            newDate.setDate(currentDate.getDate() + 7);
+            setCurrentDate(newDate);
+        } else {
+            // Go forward 1 month
+            setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
+        }
+    };
 
     const goToToday = () => {
         setCurrentDate(new Date());
         setSelectedDate(new Date().toLocaleDateString());
     };
 
+    // NEW: Toggle between month and week view
+    const toggleViewMode = () => {
+        setViewMode(viewMode === 'month' ? 'week' : 'month');
+    };
+
+    // NEW: Generate header text based on view mode
+    const getHeaderText = () => {
+        if (viewMode === 'week') {
+            // For week view, show date range
+            const startOfWeek = new Date(currentDate);
+            startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+            
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
+            
+            const startMonth = monthNames[startOfWeek.getMonth()];
+            const endMonth = monthNames[endOfWeek.getMonth()];
+            
+            if (startOfWeek.getMonth() === endOfWeek.getMonth()) {
+                // Same month: "June 1-7, 2025"
+                return `${startMonth} ${startOfWeek.getDate()}-${endOfWeek.getDate()}, ${startOfWeek.getFullYear()}`;
+            } else {
+                // Different months: "May 29 - June 4, 2025"
+                return `${startMonth} ${startOfWeek.getDate()} - ${endMonth} ${endOfWeek.getDate()}, ${startOfWeek.getFullYear()}`;
+            }
+        } else {
+            // Month view: "June 2025"
+            return `${monthNames[currentMonth]} ${currentYear}`;
+        }
+    };
+
     return (
         <div className="calendar-section">
             {/*Calendar Header with Navigation*/}
-            <div className = "calendar-header">
+            <div className="calendar-header">
                 <h3>📅 Calendar View</h3>
                 <div className="calendar-nav">
-                    <button className="nav-btn" onClick={goToPreviousMonth}>← Previous</button>
-                    <div className="current-month">{monthNames[currentMonth]} {currentYear}</div>
-                    <button className="nav-btn" onClick={goToNextMonth}>Next →</button>
+                    <button className="nav-btn" onClick={goToPrevious}>← Previous {viewMode === 'week' ? 'Week' : 'Month'}</button>
+                    <div className="current-period">{getHeaderText()}</div>
+                    <button className="nav-btn" onClick={goToNext}>Next {viewMode === 'week' ? 'Week' : 'Month'} →</button>
                     <button className="today-btn" onClick={goToToday}>Today</button>
+                    
+                    {/* View Mode Toggle */}
+                    <button className="view-toggle-btn" onClick={toggleViewMode}>{viewMode === 'month' ? '📅 Week View' : '🗓️ Month View'}</button>
                 </div>
             </div>
 
@@ -101,15 +199,9 @@ function Calendar({getDatesWithEntries, getEntriesForDate, selectedDate, setSele
                     ))}
                 </div>
 
-                {/* Calendar Days Grid */}
-                <div className="calendar-grid">
-                {calendarDays.map((day, index) => {
-                    // Create preview text for tooltip
-                    const previewText = day.hasEntries 
-                        ? `${day.entries.length} entries: ${day.entries[0].text.slice(0, 50)}${day.entries[0].text.length > 50 ? '...' : ''}`
-                        : '';
-                    
-                    return (
+                {/* Calendar Days Grid - UPDATED: Different class for week view */}
+                <div className={`calendar-grid ${viewMode === 'week' ? 'week-view' : 'month-view'}`}>
+                    {calendarDays.map((day, index) => (
                         <div 
                             key={index}
                             className={`calendar-day 
@@ -120,7 +212,6 @@ function Calendar({getDatesWithEntries, getEntriesForDate, selectedDate, setSele
                                 mood-${day.averageMood}
                             `}
                             onClick={() => setSelectedDate(day.dateString)}
-                            title={previewText} // Native tooltip as fallback
                         >
                             <div className="day-number">
                                 {day.dayNumber}
@@ -138,7 +229,7 @@ function Calendar({getDatesWithEntries, getEntriesForDate, selectedDate, setSele
                                 </div>
                             )}
                         </div>
-                    )})}
+                    ))}
                 </div>
             </div>
 
@@ -167,7 +258,6 @@ function Calendar({getDatesWithEntries, getEntriesForDate, selectedDate, setSele
             )}
         </div>
     )
-
 }
 
 export default Calendar;
