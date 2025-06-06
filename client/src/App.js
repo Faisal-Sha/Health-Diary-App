@@ -13,7 +13,24 @@ function App() {
   const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString()); //track which date we are looking at
 
 
-//will set later - for recording
+  useEffect(() => {
+    const fetchEntries = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/entries?limit=20');
+        const data = await response.json();
+        
+        if (response.ok) {
+          setDiaryEntries(data.entries);  // Update your state
+        } else {
+          console.error('Failed to fetch entries:', data.error);
+        }
+      } catch (error) {
+        console.error('Network error:', error);
+      }
+    };
+    
+    fetchEntries();
+  }, []);
   
 
 //extracting basics from text to create a noting diary
