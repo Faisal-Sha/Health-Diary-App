@@ -1,9 +1,10 @@
 import './App.css';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import InputSection from './components/InputSection'; 
 import Summary from './components/Summary';
 import Calendar from './components/Calendar';
 import DiaryEntry from './components/DiaryEntry';
+import apiService from './services/apiService';
 
 function App() {
 
@@ -12,99 +13,164 @@ function App() {
   const [currentView, setCurrentView] = useState('list'); //track which view we are in: list or calendar
   const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString()); //track which date we are looking at
 
+  // NEW: Loading and error states
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [backendStatus, setBackendStatus] = useState('checking'); // 'checking', 'connected', 'disconnected'
 
+
+  // NEW: Check backend connection on app start
   useEffect(() => {
-    const fetchEntries = async () => {
+    const checkBackendConnection = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/entries?limit=20');
-        const data = await response.json();
-        
-        if (response.ok) {
-          setDiaryEntries(data.entries);  // Update your state
-        } else {
-          console.error('Failed to fetch entries:', data.error);
-        }
+        await apiService.healthCheck();
+        setBackendStatus('connected');
+        console.log('✅ Backend connected successfully');
       } catch (error) {
-        console.error('Network error:', error);
+        setBackendStatus('disconnected');
+        console.error('❌ Backend connection failed:', error);
+        setError('Cannot connect to backend server. Please make sure Flask is running on port 5001.');
       }
     };
-    
-    fetchEntries();
+
+    checkBackendConnection();
   }, []);
-  
 
-//extracting basics from text to create a noting diary
-//returns mood and symptoms
-  const extractBasicInfo = (text) => {
-    const lowerText = text.toLowerCase();
-
-    const moodWords = {
-      positive: ['good', 'great', 'happy', 'excited', 'amazing', 'wonderful', 'fantastic'],
-      negative: ['bad', 'sad', 'angry', 'frustrated', 'terrible', 'awful', 'depressed'],
-      neutral: ['okay', 'fine', 'alright', 'normal', 'average']
+  // NEW: Load existing entries when app starts
+  useEffect(() => {
+    if (backendStatus === 'connected') {
+      loadEntries();
     }
+  }, [backendStatus]);
 
-    const symptoms = ['headache', 'pain', 'tired', 'fatigue', 'nausea', 'dizzy', 'sore'];
-    
-    //find mood 
-    let detectedMood = 'nuetral';
-    for (let mood in moodWords) {
-      if (moodWords[mood].some(word => lowerText.includes(word))) {
-        detectedMood = mood;
-        break;
-      }
+  // NEW: Function to load entries from backend
+  const loadEntries = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const result = await apiService.getEntries({ limit: 50 });
+      
+      // Convert backend format to your current React format
+      const convertedEntries = result.entries.map(entry => apiService.convertBackendEntry(entry));
+      
+      setDiaryEntries(convertedEntries);
+      console.log(`📥 Loaded ${convertedEntries.length} entries from backend`);
+      
+    } catch (error) {
+      console.error('Failed to load entries:', error);
+      setError('Failed to load diary entries. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    //find symptoms
-    const detectedSymptoms = symptoms.filter(symptom => lowerText.includes(symptom));
-    
-    return {
-      mood: detectedMood,
-      symptoms: detectedSymptoms
-    };
-  }
 
-//Get entries for a specific date
-  const getEntriesForDate = (date) => {
-    return diaryEntries.filter(entry => entry.date === date)
-  }
 
-//get unique dates that have entries 
-  const getDatesWithEntries = () => {
-    const dates = diaryEntries.map(entry => entry.date)
-    return [...new Set(dates)];//removes duplicates
-  }
 
 //creating an entry object and adding it to diaryEntries array
-  const handleSaveEntry = () => {
+  
+  const handleSaveEntry = async () => {
     if (diaryText.trim() === '') {
       alert("Please write something first!");
       return;
     }
 
-    const basicInfo = extractBasicInfo(diaryText);
+    try {
+      setIsLoading(true);
+      setError(null);
 
-    const newEntry = {
-      id: Date.now(), //simple for now
-      text: diaryText, 
-      date: new Date().toLocaleDateString(),
-      time: new Date().toLocaleTimeString(),
-      mood: basicInfo.mood,
-      symptoms: basicInfo.symptoms
-    };
-  
-    //Add it to list of entries
-    setDiaryEntries([newEntry, ...diaryEntries]);
-    setDiaryText('');
-    alert("Entry Saved!")
+      // Send to backend (with AI processing)
+      const result = await apiService.createEntry(diaryText, new Date().toISOString().split('T')[0]);
+      
+      // FIXED: Create a backend-style entry object, then convert it properly
+      const backendStyleEntry = {
+        id: result.entry_id,
+        entry_text: diaryText,
+        entry_date: new Date().toISOString().split('T')[0], // "2024-06-06" format
+        created_at: new Date().toISOString(),
+        mood_score: result.ai_extracted_data?.mood_score,
+        energy_level: result.ai_extracted_data?.energy_level,
+        pain_level: result.ai_extracted_data?.pain_level,
+        sleep_quality: result.ai_extracted_data?.sleep_quality,
+        sleep_hours: result.ai_extracted_data?.sleep_hours,
+        stress_level: result.ai_extracted_data?.stress_level,
+        ai_confidence: result.ai_extracted_data?.confidence || 0
+      };
 
-  }
+      // Convert using the same function as loaded entries
+      const newEntry = apiService.convertBackendEntry(backendStyleEntry);
+
+      // Add to the top of the list (newest first)
+      setDiaryEntries([newEntry, ...diaryEntries]);
+      setDiaryText('');
+      
+      alert(`Entry Saved! AI Confidence: ${Math.round((newEntry.aiConfidence || 0) * 100)}%`);
+      
+    } catch (error) {
+      console.error('Failed to save entry:', error);
+      setError('Failed to save entry. Please try again.');
+      alert('Failed to save entry. Please check your connection and try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
 //deleting entries
-  const handleDeleteEntry = (entryId) => {
-    setDiaryEntries(diaryEntries.filter(entry => entry.id !== entryId));
-    alert("Entry Deleted!");
+  const handleDeleteEntry = async(entryId) => {
+    try {
+      // For now, just remove from local state
+      // TODO: Add DELETE endpoint to backend
+      setDiaryEntries(diaryEntries.filter(entry => entry.id !== entryId));
+      alert("Entry Deleted!");
+    } catch (error) {
+      console.error('Failed to delete entry:', error);
+      alert('Failed to delete entry. Please try again.');
+    }
   }
+
+  const getEntriesForDate = (date) => {
+    console.log('🔍 getEntriesForDate called with:', date);
+    console.log('📊 Current diaryEntries array:', diaryEntries);
+    
+    const filteredEntries = diaryEntries.filter(entry => {
+      console.log(`Comparing entry.date "${entry.date}" with requested date "${date}"`);
+      return entry.date === date;
+    });
+    
+    console.log(`✅ Found ${filteredEntries.length} entries for ${date}:`, filteredEntries);
+    return filteredEntries;
+  };
+  
+  // UPDATED: Get unique dates that have entries - WITH DEBUGGING
+  const getDatesWithEntries = () => {
+    console.log('🔍 getDatesWithEntries called');
+    console.log('📊 Current diaryEntries array:', diaryEntries);
+    
+    const dates = diaryEntries.map(entry => {
+      console.log(`Entry date: "${entry.date}"`);
+      return entry.date;
+    });
+    
+    const uniqueDates = [...new Set(dates)];
+    console.log('📅 Unique dates found:', uniqueDates);
+    return uniqueDates;
+  };
+
+  // Show connection status
+  const renderConnectionStatus = () => {
+    if (backendStatus === 'checking') {
+      return <div className="status-message checking">🔄 Connecting to backend...</div>;
+    }
+    if (backendStatus === 'disconnected') {
+      return (
+        <div className="status-message error">
+          ⚠️ Backend disconnected. Please start your Flask server.
+        </div>
+      );
+    }
+    return <div className="status-message connected">✅ Connected to backend</div>;
+  };
 
   
 
@@ -115,12 +181,32 @@ function App() {
       <h1>My Health Diary App</h1>
       <p>Welcome to your personal health tracker!</p>
 
+      {/* Connection Status */}
+      {renderConnectionStatus()}
+
+      {/* Error Display */}
+      {error && (
+        <div className="error-message">
+          ❌ {error}
+          <button onClick={() => setError(null)}>✕</button>
+        </div>
+      )}
+
       {/* Input Section for Entries*/}
       <InputSection
-        diaryText = {diaryText}
+        diaryText={diaryText}
         onTextChange={setDiaryText}
         onSaveEntry={handleSaveEntry}
+        isLoading={isLoading}
+        disabled={backendStatus !== 'connected'}
       />
+
+      {/* Loading Indicator */}
+      {isLoading && (
+        <div className="loading-message">
+          🔄 Processing your entry with AI...
+        </div>
+      )}
 
       {/* View toggle buttons */}
       <div className="view-toggle">
@@ -137,40 +223,46 @@ function App() {
       {/* Show saved entries */}
       {diaryEntries.length > 0 && (
         <>
-
-        {/*Quick Summary */}
+          {/*Quick Summary */}
           <Summary 
-            Entries = {diaryEntries}
+            Entries={diaryEntries}
           />
 
-        {/* Calendar View Content*/}
-        {currentView === 'calendar' && (
+          {/* Calendar View Content*/}
+          {currentView === 'calendar' && (
             <Calendar 
-              getDatesWithEntries = {getDatesWithEntries}
-              getEntriesForDate = {getEntriesForDate}
-              selectedDate = {selectedDate}
-              setSelectedDate = {setSelectedDate}
-              handleDeleteEntry = {handleDeleteEntry}
+              getDatesWithEntries={getDatesWithEntries}
+              getEntriesForDate={getEntriesForDate}
+              selectedDate={selectedDate}
+              setSelectedDate={setSelectedDate}
+              handleDeleteEntry={handleDeleteEntry}
             />
           )}
 
-
-        {/*List View Content*/}
-        {currentView === 'list' && (
-          <div className="entries-section">
-            <h3>Your Recent Entries</h3>
-            {diaryEntries.map((entry) => (
-              <DiaryEntry 
-                entry = {entry}
-                deleteEntry={handleDeleteEntry}
-              />
-            ))}
-          </div>
-        )}
-        
+          {/*List View Content*/}
+          {currentView === 'list' && (
+            <div className="entries-section">
+              <h3>Your Recent Entries ({diaryEntries.length} total)</h3>
+              {diaryEntries.map((entry) => (
+                <DiaryEntry 
+                  key={entry.id}
+                  entry={entry}
+                  deleteEntry={handleDeleteEntry}
+                />
+              ))}
+            </div>
+          )}
         </>
       )}
-    </div>
+
+      {/* Empty state when no entries and not loading */}
+      {diaryEntries.length === 0 && !isLoading && backendStatus === 'connected' && (
+          <div className="empty-state">
+            <h3>No diary entries yet</h3>
+            <p>Start by writing your first entry above!</p>
+          </div>
+        )}
+      </div>
   );
 }
 

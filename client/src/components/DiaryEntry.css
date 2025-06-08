@@ -80,4 +80,23 @@
     color: #856404;
   }
   
+  .entry-date-time {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
   
+  .entry-date {
+    font-weight: bold;
+  }
+  
+  .entry-time {
+    font-size: 0.8em;
+    color: #95a5a6;
+  }
+  
+  .ai-confidence {
+    font-size: 0.7em;
+    color: #8e44ad;
+    font-weight: bold;
+  }

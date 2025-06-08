@@ -45,13 +45,20 @@ function Calendar({getDatesWithEntries, getEntriesForDate, selectedDate, setSele
                 const isSelected = selectedDate === dateString;
                 
                 // Calculate average mood
+                // Calculate average mood using AI mood scores
                 let averageMood = 'neutral';
                 if (dayEntries.length > 0) {
+                    // Use AI mood scores if available, otherwise fall back to mood strings
                     const moodSum = dayEntries.reduce((sum, entry) => {
-                        return sum + (entry.mood === 'positive' ? 3 : entry.mood === 'negative' ? 1 : 2);
+                        if (entry.aiData && entry.aiData.moodScore) {
+                            return sum + entry.aiData.moodScore;
+                        } else {
+                            // Fallback to string-based mood
+                            return sum + (entry.mood === 'positive' ? 8 : entry.mood === 'negative' ? 3 : 5);
+                        }
                     }, 0);
                     const avgScore = moodSum / dayEntries.length;
-                    averageMood = avgScore > 2.5 ? 'positive' : avgScore < 1.5 ? 'negative' : 'neutral';
+                    averageMood = avgScore > 6.5 ? 'positive' : avgScore < 4.5 ? 'negative' : 'neutral';
                 }
                 
                 days.push({
@@ -87,11 +94,17 @@ function Calendar({getDatesWithEntries, getEntriesForDate, selectedDate, setSele
 
                 let averageMood = 'neutral';
                 if (dayEntries.length > 0) {
+                    // Use AI mood scores if available, otherwise fall back to mood strings
                     const moodSum = dayEntries.reduce((sum, entry) => {
-                        return sum + (entry.mood === 'positive' ? 3 : entry.mood === 'negative' ? 1 : 2);
+                        if (entry.aiData && entry.aiData.moodScore) {
+                            return sum + entry.aiData.moodScore;
+                        } else {
+                            // Fallback to string-based mood
+                            return sum + (entry.mood === 'positive' ? 8 : entry.mood === 'negative' ? 3 : 5);
+                        }
                     }, 0);
                     const avgScore = moodSum / dayEntries.length;
-                    averageMood = avgScore > 2.5 ? 'positive' : avgScore < 1.5 ? 'negative' : 'neutral';
+                    averageMood = avgScore > 6.5 ? 'positive' : avgScore < 4.5 ? 'negative' : 'neutral';
                 }
 
                 days.push({

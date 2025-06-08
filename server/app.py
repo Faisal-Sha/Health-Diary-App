@@ -4,7 +4,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
 from datetime import datetime
-import openai
+from openai import OpenAI
 import json
 from dotenv import load_dotenv
 
@@ -14,12 +14,11 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)  # Allow React frontend to connect
 
-
-#Database Configuration
+# Database configuration
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://username:password@localhost/health_app')
 
 # OpenAI configuration
-openai.api_key = os.getenv('OPENAI_API_KEY')
+openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 def get_db_connection():
     """Create database connection"""
@@ -29,7 +28,7 @@ def get_db_connection():
     except Exception as e:
         print(f"Database connection error: {e}")
         return None
-    
+
 def extract_health_data_with_ai(diary_text):
     """Extract structured health data using ChatGPT"""
     prompt = f"""You are a health data extraction specialist. Analyze the following health diary entry and extract structured information.
@@ -63,8 +62,9 @@ CRITICAL SCORING GUIDELINES:
 - stress_level: 0=completely relaxed/no stress, 5=normal stress, 10=extremely stressed/overwhelmed
 
 If information is not mentioned or unclear, use null for numbers and empty arrays for lists."""
+
     try:
-        response = openai.ChatCompletion.create(
+        response = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.1  # Low temperature for consistent extraction
@@ -93,7 +93,6 @@ If information is not mentioned or unclear, use null for numbers and empty array
             "confidence": 0.0
         }
 
-
 # API Routes
 
 @app.route('/api/health', methods=['GET'])
@@ -112,13 +111,13 @@ def create_entry():
         data = request.get_json()
         diary_text = data.get('text', '')
         entry_date = data.get('date', datetime.now().date().isoformat())
-
+        
         if not diary_text.strip():
             return jsonify({"error": "Entry text cannot be empty"}), 400
         
         # Process text with AI
         ai_data = extract_health_data_with_ai(diary_text)
-
+        
         # Save to database
         conn = get_db_connection()
         if not conn:
@@ -126,17 +125,16 @@ def create_entry():
         
         try:
             cursor = conn.cursor()
-
+            
             # Insert raw entry
             cursor.execute("""
                 INSERT INTO raw_entries (user_id, entry_text, entry_date, created_at)
                 VALUES (%s, %s, %s, %s)
                 RETURNING id
             """, (1, diary_text, entry_date, datetime.now()))  # user_id=1 for now
-
+            
             raw_entry_id = cursor.fetchone()['id']
-
-
+            
             # Insert processed health metrics
             cursor.execute("""
                 INSERT INTO health_metrics (
@@ -153,27 +151,25 @@ def create_entry():
                 ai_data.get('sleep_hours'), ai_data.get('stress_level'),
                 ai_data.get('confidence', 0.0), datetime.now()
             ))
-
+            
             health_metric_id = cursor.fetchone()['id']
             
             conn.commit()
-
+            
             return jsonify({
                 "success": True,
                 "entry_id": raw_entry_id,
                 "health_metric_id": health_metric_id,
                 "ai_extracted_data": ai_data
             })
-        
+            
         finally:
             cursor.close()
             conn.close()
-    
+            
     except Exception as e:
         print(f"Error creating entry: {e}")
         return jsonify({"error": "Failed to create entry"}), 500
-    
-
 
 @app.route('/api/entries', methods=['GET'])
 def get_entries():
@@ -237,11 +233,6 @@ def get_entries():
     except Exception as e:
         print(f"Error fetching entries: {e}")
         return jsonify({"error": "Failed to fetch entries"}), 500
-    
-
-
-
-
 
 @app.route('/api/analytics/summary', methods=['GET'])
 def get_health_summary():
@@ -285,14 +276,10 @@ def get_health_summary():
     except Exception as e:
         print(f"Error fetching summary: {e}")
         return jsonify({"error": "Failed to fetch summary"}), 500
-    
-
 
 if __name__ == '__main__':
     print("🚀 Starting Health App Backend...")
     print("📊 Database URL:", DATABASE_URL)
-    print("🤖 OpenAI API configured:", "✅" if openai.api_key else "❌")
+    print("🤖 OpenAI API configured:", "✅" if os.getenv('OPENAI_API_KEY') else "❌")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
-
-            
+    app.run(debug=True, host='0.0.0.0', port=5001)
