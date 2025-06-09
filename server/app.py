@@ -12,7 +12,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)  # Allow React frontend to connect
+print(app);
+CORS(app, origins=["http://localhost:3000"])  # Allow React frontend to connect
 
 # Database configuration
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://username:password@localhost/health_app')

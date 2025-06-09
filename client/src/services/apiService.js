@@ -108,11 +108,16 @@ class ApiService {
 
   // Convert backend entry format to your current React format
   convertBackendEntry(backendEntry) {
+    console.log('🔄 Converting backend entry:', backendEntry);
+    
     // Create a proper Date object and format time
     const createdDate = new Date(backendEntry.created_at);
     const entryDate = backendEntry.entry_date;
     
-    return {
+    console.log('📅 Entry date from backend:', entryDate);
+    console.log('📅 Created date from backend:', backendEntry.created_at);
+    
+    const convertedEntry = {
       id: backendEntry.id,
       text: backendEntry.entry_text,
       date: this.formatDateForReact(entryDate), // Convert to your expected format
@@ -142,13 +147,42 @@ class ApiService {
         stressLevel: backendEntry.stress_level
       }
     };
+    
+    console.log('✅ Converted entry:', convertedEntry);
+    return convertedEntry;
   }
 
   // Format date to match your React component expectations
   formatDateForReact(dateString) {
-    // Convert "2024-06-06" to "6/6/2024" (your original format)
-    const date = new Date(dateString + 'T00:00:00');
-    return date.toLocaleDateString();
+    console.log('🔄 formatDateForReact input:', dateString, 'type:', typeof dateString);
+    
+    // Handle null/undefined dates
+    if (!dateString) {
+      console.log('❌ Date string is null/undefined, using today');
+      return new Date().toLocaleDateString();
+    }
+    
+    // Create date object - handle different formats from backend
+    let date;
+    
+    if (dateString.includes('GMT') || dateString.includes('T')) {
+      // Backend sends full date strings like "Sun, 08 Jun 2025 00:00:00 GMT"
+      date = new Date(dateString);
+    } else {
+      // Simple format like "2024-06-06"
+      date = new Date(dateString + 'T00:00:00');
+    }
+    
+    console.log('📅 Created date object:', date);
+    
+    if (isNaN(date.getTime())) {
+      console.log('❌ Invalid date created, using today instead');
+      return new Date().toLocaleDateString();
+    }
+    
+    const formatted = date.toLocaleDateString();
+    console.log(`✅ Date conversion: "${dateString}" → "${formatted}"`);
+    return formatted;
   }
 
   // Map AI mood score (1-10) to your current mood categories
