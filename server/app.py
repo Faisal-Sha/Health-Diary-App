@@ -7,12 +7,13 @@ from datetime import datetime
 from openai import OpenAI
 import json
 from dotenv import load_dotenv
+from analytics_engine import HealthAnalyticsEngine
 
 # Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
-print(app);
+
 CORS(app, origins=["http://localhost:3000"])  # Allow React frontend to connect
 
 # Database configuration
@@ -20,6 +21,11 @@ DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://username:password@localho
 
 # OpenAI configuration
 openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+analytics_engine = HealthAnalyticsEngine(
+    database_url=DATABASE_URL,
+    openai_api_key=os.getenv('OPENAI_API_KEY')
+)
 
 def get_db_connection():
     """Create database connection"""
@@ -277,6 +283,181 @@ def get_health_summary():
     except Exception as e:
         print(f"Error fetching summary: {e}")
         return jsonify({"error": "Failed to fetch summary"}), 500
+    
+
+@app.route('/api/analytics/weekly-summary', methods=['GET'])
+def get_weekly_summary():
+    """
+    Generate comprehensive weekly health summary with AI insights
+    This is the main endpoint for your new analytics feature
+    """
+    try:
+        user_id = request.args.get('user_id', 1, type=int)
+        
+        print(f"🔄 Generating weekly summary for user {user_id}")
+        
+        # Generate the complete analysis
+        summary = analytics_engine.generate_weekly_summary(user_id)
+        
+        # Convert to JSON-serializable format
+        response_data = {
+            "success": True,
+            "summary": {
+                "period": {
+                    "start_date": summary.period_start,
+                    "end_date": summary.period_end,
+                    "total_entries": summary.total_entries
+                },
+                "health_metrics": {
+                    "mood": {
+                        "average": summary.avg_mood,
+                        "trend": summary.mood_trend,
+                        "scale": "1-10 (higher is better)"
+                    },
+                    "energy": {
+                        "average": summary.avg_energy,
+                        "trend": summary.energy_trend,
+                        "scale": "1-10 (higher is better)"
+                    },
+                    "pain": {
+                        "average": summary.avg_pain,
+                        "trend": summary.pain_trend,
+                        "scale": "0-10 (lower is better)"
+                    },
+                    "sleep": {
+                        "average_hours": summary.avg_sleep_hours,
+                        "scale": "hours per night"
+                    },
+                    "stress": {
+                        "average": summary.avg_stress,
+                        "scale": "0-10 (lower is better)"
+                    }
+                },
+                "correlations": summary.correlations,
+                "insights": {
+                    "key_findings": summary.insights,
+                    "potential_triggers": summary.potential_triggers,
+                    "recommendations": summary.recommendations
+                },
+                "generated_at": datetime.now().isoformat()
+            }
+        }
+        
+        print("✅ Weekly summary generated successfully")
+        return jsonify(response_data)
+        
+    except Exception as e:
+        print(f"❌ Error generating weekly summary: {e}")
+        return jsonify({
+            "success": False,
+            "error": "Failed to generate weekly summary",
+            "details": str(e)
+        }), 500
+
+@app.route('/api/analytics/correlations', methods=['GET'])
+def get_health_correlations():
+    """
+    Get just the correlation analysis - useful for debugging or focused analysis
+    """
+    try:
+        user_id = request.args.get('user_id', 1, type=int)
+        weeks_back = request.args.get('weeks', 1, type=int)
+        
+        # Get data and find correlations
+        raw_data = analytics_engine.get_weekly_data(user_id, weeks_back)
+        correlations = analytics_engine.find_correlations(raw_data)
+        
+        return jsonify({
+            "success": True,
+            "correlations": correlations,
+            "data_points": len(raw_data),
+            "period_weeks": weeks_back
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting correlations: {e}")
+        return jsonify({
+            "success": False, 
+            "error": "Failed to analyze correlations"
+        }), 500
+
+@app.route('/api/analytics/trends', methods=['GET'])
+def get_health_trends():
+    """
+    Get trend analysis for the past several weeks - for charts and graphs
+    """
+    try:
+        user_id = request.args.get('user_id', 1, type=int)
+        weeks_back = request.args.get('weeks', 4, type=int)
+        
+        trends_data = []
+        
+        # Get data for each week
+        for week in range(weeks_back):
+            week_data = analytics_engine.get_weekly_data(user_id, weeks_back=1)
+            if week_data:
+                stats = analytics_engine.calculate_basic_stats(week_data)
+                trends_data.append({
+                    "week": week + 1,
+                    "start_date": stats.get('date_range', {}).get('start'),
+                    "end_date": stats.get('date_range', {}).get('end'),
+                    "metrics": {
+                        "mood": stats.get('mood', {}).get('average', 0),
+                        "energy": stats.get('energy', {}).get('average', 0), 
+                        "pain": stats.get('pain', {}).get('average', 0),
+                        "sleep": stats.get('sleep', {}).get('average_hours', 0),
+                        "stress": stats.get('stress', {}).get('average', 0)
+                    }
+                })
+        
+        return jsonify({
+            "success": True,
+            "trends": trends_data,
+            "weeks_analyzed": weeks_back
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting trends: {e}")
+        return jsonify({
+            "success": False,
+            "error": "Failed to analyze trends"
+        }), 500
+    
+    
+
+@app.route('/api/analytics/test', methods=['GET'])
+def test_analytics():
+    """
+    Test endpoint to verify analytics engine is working
+    """
+    try:
+        # Test database connection
+        conn = analytics_engine.get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        conn.close()
+        
+        # Test AI connection (simple test)
+        test_response = analytics_engine.openai_client.chat.completions.create(
+            model="gpt-4-turbo-preview",
+            messages=[{"role": "user", "content": "Test message - respond with 'OK'"}],
+            max_tokens=10
+        )
+        
+        ai_working = "OK" in test_response.choices[0].message.content
+        
+        return jsonify({
+            "database_connected": True,
+            "ai_connected": ai_working,
+            "analytics_engine": "operational",
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "error": f"Analytics test failed: {str(e)}"
+        }), 500
+    
 
 if __name__ == '__main__':
     print("🚀 Starting Health App Backend...")
