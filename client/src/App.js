@@ -5,6 +5,7 @@ import Summary from './components/Summary';
 import Calendar from './components/Calendar';
 import DiaryEntry from './components/DiaryEntry';
 import WeeklyInsights from './components/WeeklyInsights';
+import HeroSection from './components/HeroSection';
 import apiService from './services/apiService';
 
 function App() {
@@ -179,8 +180,19 @@ function App() {
 
   return (
     <div className="App">
-      <h1>My Health Diary App</h1>
-      <p>Welcome to your personal health tracker!</p>
+
+      {currentView === 'home' && (
+        <>
+          <HeroSection />
+        </>
+      )}
+
+      {currentView !== 'home' && (
+        <>
+          <h1>My Health Diary App</h1>
+          <p>Welcome to your personal AI-powered health tracker!</p>
+        </>
+      )}
 
       {/* Connection Status */}
       {renderConnectionStatus()}
@@ -213,6 +225,10 @@ function App() {
 
       {/* View toggle buttons */}
       <div className="view-toggle">
+        <button 
+          className={currentView === 'home' ? 'view-btn active' : 'view-btn'}
+          onClick={() => setCurrentView('home')}
+        >🏠 Home</button>
         <button 
           className={currentView === 'list' ? 'view-btn active' : 'view-btn'}
           onClick={() => setCurrentView('list')}
