@@ -4,6 +4,7 @@ import InputSection from './components/InputSection';
 import Summary from './components/Summary';
 import Calendar from './components/Calendar';
 import DiaryEntry from './components/DiaryEntry';
+import WeeklyInsights from './components/WeeklyInsights';
 import apiService from './services/apiService';
 
 function App() {
@@ -13,13 +14,13 @@ function App() {
   const [currentView, setCurrentView] = useState('list'); //track which view we are in: list or calendar
   const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString()); //track which date we are looking at
 
-  // NEW: Loading and error states
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [backendStatus, setBackendStatus] = useState('checking'); // 'checking', 'connected', 'disconnected'
 
 
-  // NEW: Check backend connection on app start
+  
   useEffect(() => {
     const checkBackendConnection = async () => {
       try {
@@ -36,14 +37,14 @@ function App() {
     checkBackendConnection();
   }, []);
 
-  // NEW: Load existing entries when app starts
+  // Load existing entries when app starts
   useEffect(() => {
     if (backendStatus === 'connected') {
       loadEntries();
     }
   }, [backendStatus]);
 
-  // NEW: Function to load entries from backend
+  // Function to load entries from backend
   const loadEntries = async () => {
     try {
       setIsLoading(true);
@@ -83,7 +84,7 @@ function App() {
       // Send to backend (with AI processing)
       const result = await apiService.createEntry(diaryText, new Date().toISOString().split('T')[0]);
       
-      // FIXED: Create a backend-style entry object, then convert it properly
+      // Create a backend-style entry object, then convert it properly
       const backendStyleEntry = {
         id: result.entry_id,
         entry_text: diaryText,
@@ -142,7 +143,7 @@ function App() {
     return filteredEntries;
   };
   
-  // UPDATED: Get unique dates that have entries - WITH DEBUGGING
+  // Get unique dates that have entries
   const getDatesWithEntries = () => {
     console.log('🔍 getDatesWithEntries called');
     console.log('📊 Current diaryEntries array:', diaryEntries);
@@ -193,13 +194,15 @@ function App() {
       )}
 
       {/* Input Section for Entries*/}
-      <InputSection
-        diaryText={diaryText}
-        onTextChange={setDiaryText}
-        onSaveEntry={handleSaveEntry}
-        isLoading={isLoading}
-        disabled={backendStatus !== 'connected'}
-      />
+      {currentView !== 'analytics' && (
+        <InputSection
+          diaryText={diaryText}
+          onTextChange={setDiaryText}
+          onSaveEntry={handleSaveEntry}
+          isLoading={isLoading}
+          disabled={backendStatus !== 'connected'}
+        />
+      )}
 
       {/* Loading Indicator */}
       {isLoading && (
@@ -218,10 +221,19 @@ function App() {
           className={currentView === 'calendar' ? 'view-btn active' : 'view-btn'}
           onClick={() => setCurrentView('calendar')}
         >📅 Calendar View</button>
+        <button
+          className={currentView === 'analytics' ? 'view-btn active' : 'view-btn'}
+          onClick={() => setCurrentView('analytics')}
+        >🧠 AI Insights</button>
       </div>
 
-      {/* Show saved entries */}
-      {diaryEntries.length > 0 && (
+      {/* NEW: Analytics View */}
+      {currentView === 'analytics' && (
+        <WeeklyInsights />
+      )}
+
+      {/* Show saved entries for list and calendar views */}
+      {currentView !== 'analytics' && diaryEntries.length > 0 && (
         <>
           {/*Quick Summary */}
           <Summary 
@@ -255,8 +267,8 @@ function App() {
         </>
       )}
 
-      {/* Empty state when no entries and not loading */}
-      {diaryEntries.length === 0 && !isLoading && backendStatus === 'connected' && (
+      {/* Empty state when no entries and not loading and not in analytics view */}
+      {diaryEntries.length === 0 && !isLoading && backendStatus === 'connected' && currentView !== 'analytics' && (
           <div className="empty-state">
             <h3>No diary entries yet</h3>
             <p>Start by writing your first entry above!</p>
