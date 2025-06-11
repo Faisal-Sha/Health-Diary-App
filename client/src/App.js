@@ -6,6 +6,8 @@ import Calendar from './components/Calendar';
 import DiaryEntry from './components/DiaryEntry';
 import WeeklyInsights from './components/WeeklyInsights';
 import HeroSection from './components/HeroSection';
+import HealthCharts from './components/HealthCharts';
+import DataImport from './components/DataImport';
 import apiService from './services/apiService';
 
 function App() {
@@ -119,17 +121,45 @@ function App() {
   };
 
 //deleting entries
-  const handleDeleteEntry = async(entryId) => {
+  const handleDeleteEntry = async (entryId) => {
     try {
-      // For now, just remove from local state
-      // TODO: Add DELETE endpoint to backend
-      setDiaryEntries(diaryEntries.filter(entry => entry.id !== entryId));
-      alert("Entry Deleted!");
+      setIsLoading(true);
+      
+      // Check if it's a demo entry
+      if (apiService.isDemoEntry(entryId)) {
+        // Demo entries: just remove from frontend state
+        setDiaryEntries(diaryEntries.filter(entry => entry.id !== entryId));
+        alert("✅ Demo entry removed!");
+      } else {
+        // Real entries: delete from database
+        await apiService.deleteEntry(entryId);
+        setDiaryEntries(diaryEntries.filter(entry => entry.id !== entryId));
+        alert("✅ Entry deleted from database!");
+      }
+      
     } catch (error) {
       console.error('Failed to delete entry:', error);
-      alert('Failed to delete entry. Please try again.');
+      alert('❌ Failed to delete entry. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-  }
+  };
+
+  const handleDataImport = (newEntries, action = 'add') => {
+    if (action === 'replace') {
+      // Replace all entries (used by clear functions)
+      setDiaryEntries(newEntries);
+      if (newEntries.length === 0) {
+        console.log('🗑️ All data cleared!');
+      } else {
+        console.log(`📊 Data replaced with ${newEntries.length} entries`);
+      }
+    } else {
+      // Add new entries (default behavior)
+      setDiaryEntries([...newEntries, ...diaryEntries]);
+      alert(`📥 Successfully imported ${newEntries.length} demo entries!`);
+    }
+  };
 
   const getEntriesForDate = (date) => {
     console.log('🔍 getEntriesForDate called with:', date);
@@ -184,6 +214,7 @@ function App() {
       {currentView === 'home' && (
         <>
           <HeroSection />
+          
         </>
       )}
 
@@ -238,18 +269,35 @@ function App() {
           onClick={() => setCurrentView('calendar')}
         >📅 Calendar View</button>
         <button
+          className={currentView === 'charts' ? 'view-btn active' : 'view-btn'}
+          onClick={() => setCurrentView('charts')}
+        >📊 Data Visualization</button>
+        <button
           className={currentView === 'analytics' ? 'view-btn active' : 'view-btn'}
           onClick={() => setCurrentView('analytics')}
         >🧠 AI Insights</button>
       </div>
 
-      {/* NEW: Analytics View */}
+      {/* Charts View */}
+      {currentView === 'charts' && (
+        <>
+          
+
+          {/* NEW: Health Charts */}
+          {diaryEntries.length > 0 && (
+            <HealthCharts entries={diaryEntries} />
+          )}
+        </>
+        
+      )}
+
+      {/* Analytics View */}
       {currentView === 'analytics' && (
         <WeeklyInsights />
       )}
 
       {/* Show saved entries for list and calendar views */}
-      {currentView !== 'analytics' && diaryEntries.length > 0 && (
+      {currentView !== 'analytics' && currentView !== 'charts' && diaryEntries.length > 0 && (
         <>
           {/*Quick Summary */}
           <Summary 
@@ -269,6 +317,10 @@ function App() {
 
           {/*List View Content*/}
           {currentView === 'list' && (
+            <>
+            
+            
+
             <div className="entries-section">
               <h3>Your Recent Entries ({diaryEntries.length} total)</h3>
               {diaryEntries.map((entry) => (
@@ -279,12 +331,25 @@ function App() {
                 />
               ))}
             </div>
+            </>
           )}
         </>
       )}
 
+      {currentView === 'home' && (
+        <>
+          {/* NEW: Data Import Component */}
+          <DataImport 
+          onImportData={handleDataImport} 
+          currentEntries={diaryEntries.length} 
+          allEntries={diaryEntries}
+          />
+        </>
+        
+      )}
+
       {/* Empty state when no entries and not loading and not in analytics view */}
-      {diaryEntries.length === 0 && !isLoading && backendStatus === 'connected' && currentView !== 'analytics' && (
+      {diaryEntries.length === 0 && !isLoading && backendStatus === 'connected' && currentView !== 'analytics' && currentView !== 'charts'&& (
           <div className="empty-state">
             <h3>No diary entries yet</h3>
             <p>Start by writing your first entry above!</p>

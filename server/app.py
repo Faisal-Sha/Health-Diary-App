@@ -423,7 +423,7 @@ def get_health_trends():
             "error": "Failed to analyze trends"
         }), 500
     
-    
+
 
 @app.route('/api/analytics/test', methods=['GET'])
 def test_analytics():
@@ -456,6 +456,157 @@ def test_analytics():
     except Exception as e:
         return jsonify({
             "error": f"Analytics test failed: {str(e)}"
+        }), 500
+
+
+@app.route('/api/entries/<int:entry_id>', methods=['DELETE'])
+def delete_entry(entry_id):
+    """
+    Delete a specific diary entry and its associated health metrics
+    """
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        try:
+            cursor = conn.cursor()
+            
+            # First, delete associated health metrics
+            cursor.execute("""
+                DELETE FROM health_metrics 
+                WHERE raw_entry_id = %s
+            """, (entry_id,))
+            
+            # Then delete the raw entry
+            cursor.execute("""
+                DELETE FROM raw_entries 
+                WHERE id = %s AND user_id = %s
+            """, (entry_id, 1))  # user_id=1 for now
+            
+            # Check if entry was actually deleted
+            if cursor.rowcount == 0:
+                return jsonify({
+                    "success": False,
+                    "error": "Entry not found or you don't have permission to delete it"
+                }), 404
+            
+            conn.commit()
+            
+            return jsonify({
+                "success": True,
+                "message": f"Entry {entry_id} deleted successfully"
+            })
+            
+        finally:
+            cursor.close()
+            conn.close()
+            
+    except Exception as e:
+        print(f"Error deleting entry {entry_id}: {e}")
+        return jsonify({
+            "success": False,
+            "error": "Failed to delete entry"
+        }), 500
+
+@app.route('/api/entries/clear-all', methods=['DELETE'])
+def clear_all_entries():
+    """
+    Delete ALL entries for a user (use with caution!)
+    """
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        try:
+            cursor = conn.cursor()
+            
+            # Delete all health metrics for this user
+            cursor.execute("""
+                DELETE FROM health_metrics 
+                WHERE user_id = %s
+            """, (1,))  # user_id=1 for now
+            
+            # Delete all raw entries for this user
+            cursor.execute("""
+                DELETE FROM raw_entries 
+                WHERE user_id = %s
+            """, (1,))
+            
+            deleted_count = cursor.rowcount
+            conn.commit()
+            
+            return jsonify({
+                "success": True,
+                "message": f"All {deleted_count} entries deleted successfully"
+            })
+            
+        finally:
+            cursor.close()
+            conn.close()
+            
+    except Exception as e:
+        print(f"Error clearing all entries: {e}")
+        return jsonify({
+            "success": False,
+            "error": "Failed to clear all entries"
+        }), 500
+
+@app.route('/api/entries/bulk-delete', methods=['DELETE'])
+def bulk_delete_entries():
+    """
+    Delete multiple entries by IDs
+    """
+    try:
+        data = request.get_json()
+        entry_ids = data.get('entry_ids', [])
+        
+        if not entry_ids:
+            return jsonify({
+                "success": False,
+                "error": "No entry IDs provided"
+            }), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        try:
+            cursor = conn.cursor()
+            
+            # Convert entry_ids to proper format for SQL
+            id_placeholders = ','.join(['%s'] * len(entry_ids))
+            
+            # Delete associated health metrics
+            cursor.execute(f"""
+                DELETE FROM health_metrics 
+                WHERE raw_entry_id IN ({id_placeholders})
+            """, entry_ids)
+            
+            # Delete the raw entries
+            cursor.execute(f"""
+                DELETE FROM raw_entries 
+                WHERE id IN ({id_placeholders}) AND user_id = %s
+            """, entry_ids + [1])  # Add user_id at the end
+            
+            deleted_count = cursor.rowcount
+            conn.commit()
+            
+            return jsonify({
+                "success": True,
+                "message": f"{deleted_count} entries deleted successfully"
+            })
+            
+        finally:
+            cursor.close()
+            conn.close()
+            
+    except Exception as e:
+        print(f"Error bulk deleting entries: {e}")
+        return jsonify({
+            "success": False,
+            "error": "Failed to delete entries"
         }), 500
     
 

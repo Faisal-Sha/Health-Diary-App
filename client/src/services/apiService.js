@@ -220,6 +220,79 @@ class ApiService {
     // TODO: Later we'll get actual symptoms from the database relationships
     return symptoms;
   }
+
+    // Delete a specific entry
+    async deleteEntry(entryId) {
+        try {
+        console.log(`🗑️ Deleting entry ${entryId}...`);
+        
+        const response = await fetch(`${BASE_URL}/entries/${entryId}`, {
+            method: 'DELETE',
+            headers: {
+            'Content-Type': 'application/json',
+            }
+        });
+    
+        const result = await this.handleResponse(response);
+        console.log('✅ Entry deleted successfully:', result);
+        return result;
+        
+        } catch (error) {
+        console.error('❌ Failed to delete entry:', error);
+        throw error;
+        }
+    }
+
+    // Clear ALL entries (use with extreme caution!)
+    async clearAllEntries() {
+        try {
+        console.log('🚨 Clearing ALL entries...');
+        
+        const response = await fetch(`${BASE_URL}/entries/clear-all`, {
+            method: 'DELETE',
+            headers: {
+            'Content-Type': 'application/json',
+            }
+        });
+    
+        const result = await this.handleResponse(response);
+        console.log('✅ All entries cleared successfully:', result);
+        return result;
+        
+        } catch (error) {
+        console.error('❌ Failed to clear all entries:', error);
+        throw error;
+        }
+    }
+  
+  // Delete multiple entries at once
+  async bulkDeleteEntries(entryIds) {
+    try {
+      console.log(`🗑️ Bulk deleting ${entryIds.length} entries...`);
+      
+      const response = await fetch(`${BASE_URL}/entries/bulk-delete`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ entry_ids: entryIds })
+      });
+  
+      const result = await this.handleResponse(response);
+      console.log('✅ Bulk delete successful:', result);
+      return result;
+      
+    } catch (error) {
+      console.error('❌ Failed to bulk delete entries:', error);
+      throw error;
+    }
+  }
+  
+  // Check if an entry is a demo entry (starts with 'demo_')
+  isDemoEntry(entryId) {
+    return String(entryId).startsWith('demo_');
+  }
+
 }
 
 // Export a singleton instance
