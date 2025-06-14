@@ -7,7 +7,7 @@ import DiaryEntry from './components/DiaryEntry';
 import WeeklyInsights from './components/WeeklyInsights';
 import HeroSection from './components/HeroSection';
 import HealthCharts from './components/HealthCharts';
-import DataImport from './components/DataImport';
+import DeveloperTools from './components/DeveloperTools';
 import apiService from './services/apiService';
 
 function App() {
@@ -212,18 +212,93 @@ function App() {
     <div className="App">
 
       {currentView === 'home' && (
-        <>
-          <HeroSection />
+        <div className="home-page">
+          {/* Your existing Hero Section */}
+          <HeroSection setCurrentView={setCurrentView} />
           
-        </>
+          {/* NEW: Feature Showcase Section */}
+          <div className="feature-showcase-section">
+            <div className="feature-showcase-container">
+              <h2 className="feature-showcase-title">🎯 Powerful Health Intelligence Features</h2>
+              
+              <p className="feature-showcase-subtitle">
+                Experience the future of personal health tracking with AI-powered insights
+              </p>
+
+              {/* Feature cards */}
+              <div className="feature-cards-grid">
+                {[
+                  {
+                    icon: '🤖',
+                    title: 'AI Health Analysis',
+                    description: 'GPT-4 powered extraction of health metrics from natural language diary entries',
+                    action: 'list'
+                  },
+                  {
+                    icon: '📊',
+                    title: 'Data Visualization',
+                    description: 'Interactive charts showing trends, correlations, and patterns in your health data',
+                    action: 'charts'
+                  },
+                  {
+                    icon: '🧬',
+                    title: 'Pattern Detection',
+                    description: 'Statistical analysis reveals hidden connections between sleep, pain, mood, and stress',
+                    action: 'analytics'
+                  },
+                  {
+                    icon: '🎤',
+                    title: 'Voice Interface',
+                    description: 'Speak naturally about your day - AI converts speech to structured health insights',
+                    action: 'list'
+                  },
+                  {
+                    icon: '📅',
+                    title: 'Smart Calendar',
+                    description: 'Visual calendar view with color-coded health indicators and pattern recognition',
+                    action: 'calendar'
+                  },
+                  {
+                    icon: '💡',
+                    title: 'Personalized Insights',
+                    description: 'Weekly AI-generated recommendations based on your unique health patterns',
+                    action: 'analytics'
+                  }
+                ].map((feature, index) => (
+                  <div
+                    key={index}
+                    className="feature-card"
+                    onClick={() => setCurrentView(feature.action)}
+                  >
+                    <div className="feature-card-icon">{feature.icon}</div>
+                    <h3 className="feature-card-title">{feature.title}</h3>
+                    <p className="feature-card-description">{feature.description}</p>
+                    <div className="feature-card-cta">Click to explore →</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Call to action */}
+              <div className="feature-showcase-cta">
+                <h3 className="cta-title">Ready to Transform Your Health Journey?</h3>
+                <p className="cta-subtitle">Start tracking your health with AI-powered insights today</p>
+                <button 
+                  className="cta-button"
+                  onClick={() => setCurrentView('list')}
+                >
+                  🚀 Get Started Now
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {currentView !== 'home' && (
         <>
           <h1>My Health Diary App</h1>
           <p>Welcome to your personal AI-powered health tracker!</p>
-        </>
-      )}
+        
 
       {/* Connection Status */}
       {renderConnectionStatus()}
@@ -237,7 +312,7 @@ function App() {
       )}
 
       {/* Input Section for Entries*/}
-      {currentView !== 'analytics' && (
+      {currentView !== 'analytics' && currentView !== 'home' && currentView !== 'dev-tools' && (
         <InputSection
           diaryText={diaryText}
           onTextChange={setDiaryText}
@@ -276,6 +351,10 @@ function App() {
           className={currentView === 'analytics' ? 'view-btn active' : 'view-btn'}
           onClick={() => setCurrentView('analytics')}
         >🧠 AI Insights</button>
+        <button
+        className={currentView === 'dev-tools' ? 'view-btn active' : 'view-btn'}
+        onClick={() => setCurrentView('dev-tools')}
+        >🛠️ Dev Tools</button>
       </div>
 
       {/* Charts View */}
@@ -297,7 +376,7 @@ function App() {
       )}
 
       {/* Show saved entries for list and calendar views */}
-      {currentView !== 'analytics' && currentView !== 'charts' && diaryEntries.length > 0 && (
+      {currentView !== 'analytics' && currentView !== 'charts' && currentView !== 'dev-tools' && diaryEntries.length > 0 && (
         <>
           {/*Quick Summary */}
           <Summary 
@@ -336,25 +415,24 @@ function App() {
         </>
       )}
 
-      {currentView === 'home' && (
-        <>
-          {/* NEW: Data Import Component */}
-          <DataImport 
-          onImportData={handleDataImport} 
-          currentEntries={diaryEntries.length} 
+      {currentView === 'dev-tools' && (
+        <DeveloperTools
+          onImportData={handleDataImport}
+          currentEntries={diaryEntries.length}
           allEntries={diaryEntries}
-          />
-        </>
-        
+          onDataImported={loadEntries}
+        />
       )}
 
       {/* Empty state when no entries and not loading and not in analytics view */}
-      {diaryEntries.length === 0 && !isLoading && backendStatus === 'connected' && currentView !== 'analytics' && currentView !== 'charts'&& (
+      {diaryEntries.length === 0 && !isLoading && backendStatus === 'connected' && currentView !== 'analytics' && currentView !== 'charts' && currentView !== 'dev-tools' && (
           <div className="empty-state">
             <h3>No diary entries yet</h3>
             <p>Start by writing your first entry above!</p>
           </div>
         )}
+      </>
+      )}
       </div>
   );
 }

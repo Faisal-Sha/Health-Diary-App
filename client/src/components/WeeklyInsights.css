@@ -1,6 +1,6 @@
 /* WeeklyInsights.css - Professional Analytics Dashboard Styling */
 .mini-header {
-    color: rgb(222, 167, 233);
+    color: rgb(199, 219, 223);
 }
 .analytics-dashboard {
     max-width: 1200px;
@@ -20,7 +20,7 @@
 /* Header Section */
 .analytics-header {
     text-align: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #074ca0, #4da3dc);
     color: white;
     padding: 30px;
     border-radius: 20px;

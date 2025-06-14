@@ -8,6 +8,9 @@ from openai import OpenAI
 import json
 from dotenv import load_dotenv
 from analytics_engine import HealthAnalyticsEngine
+import re
+from datetime import datetime, timedelta
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -457,6 +460,276 @@ def test_analytics():
         return jsonify({
             "error": f"Analytics test failed: {str(e)}"
         }), 500
+
+
+
+@app.route('/api/entries/bulk-import', methods=['POST'])
+def bulk_import_entries():
+    """
+    Process massive amounts of diary text - split it into individual entries,
+    extract dates, process each with AI, and save to database
+    """
+    try:
+        data = request.get_json()
+        bulk_text = data.get('text', '')
+        user_id = data.get('user_id', 1)
+        
+        if not bulk_text.strip():
+            return jsonify({"error": "No text provided for bulk import"}), 400
+        
+        print(f"🚀 Starting bulk import processing...")
+        print(f"📄 Text length: {len(bulk_text)} characters")
+        
+        # Split the bulk text into individual entries
+        entries = split_bulk_text_into_entries(bulk_text)
+        print(f"📝 Found {len(entries)} potential entries")
+        
+        if len(entries) == 0:
+            return jsonify({"error": "No valid entries found in the text"}), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        try:
+            cursor = conn.cursor()
+            processed_entries = []
+            skipped_entries = []
+            
+            for i, entry_data in enumerate(entries):
+                try:
+                    entry_text = entry_data['text']
+                    entry_date = entry_data['date']
+                    
+                    print(f"🔄 Processing entry {i+1}/{len(entries)}: {entry_date}")
+                    
+                    # Skip very short entries (likely not real diary entries)
+                    if len(entry_text.strip()) < 20:
+                        skipped_entries.append(f"Entry {i+1}: Too short ({len(entry_text)} chars)")
+                        continue
+                    
+                    # Process with AI (same function as single entries)
+                    ai_data = extract_health_data_with_ai(entry_text)
+                    
+                    # Insert raw entry
+                    cursor.execute("""
+                        INSERT INTO raw_entries (user_id, entry_text, entry_date, created_at)
+                        VALUES (%s, %s, %s, %s)
+                        RETURNING id
+                    """, (user_id, entry_text, entry_date, datetime.now()))
+                    
+                    raw_entry_id = cursor.fetchone()['id']
+                    
+                    # Insert processed health metrics
+                    cursor.execute("""
+                        INSERT INTO health_metrics (
+                            user_id, raw_entry_id, entry_date, mood_score, energy_level,
+                            pain_level, sleep_quality, sleep_hours, stress_level,
+                            ai_confidence, created_at
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (
+                        user_id, raw_entry_id, entry_date,
+                        ai_data.get('mood_score'), ai_data.get('energy_level'),
+                        ai_data.get('pain_level'), ai_data.get('sleep_quality'),
+                        ai_data.get('sleep_hours'), ai_data.get('stress_level'),
+                        ai_data.get('confidence', 0.0), datetime.now()
+                    ))
+                    
+                    processed_entries.append({
+                        'id': raw_entry_id,
+                        'date': entry_date.isoformat(),
+                        'text_preview': entry_text[:100] + "..." if len(entry_text) > 100 else entry_text,
+                        'ai_confidence': ai_data.get('confidence', 0.0)
+                    })
+                    
+                except Exception as e:
+                    print(f"❌ Error processing entry {i+1}: {e}")
+                    skipped_entries.append(f"Entry {i+1}: Processing error - {str(e)}")
+                    continue
+            
+            conn.commit()
+            
+            return jsonify({
+                "success": True,
+                "message": f"Bulk import completed successfully",
+                "total_found": len(entries),
+                "processed": len(processed_entries),
+                "skipped": len(skipped_entries),
+                "processed_entries": processed_entries[:10],  # First 10 for preview
+                "skipped_reasons": skipped_entries[:5],  # First 5 skip reasons
+                "processing_summary": {
+                    "avg_confidence": sum(e.get('ai_confidence', 0) for e in processed_entries) / len(processed_entries) if processed_entries else 0,
+                    "date_range": {
+                        "earliest": min(e['date'] for e in processed_entries) if processed_entries else None,
+                        "latest": max(e['date'] for e in processed_entries) if processed_entries else None
+                    }
+                }
+            })
+            
+        finally:
+            cursor.close()
+            conn.close()
+            
+    except Exception as e:
+        print(f"❌ Error in bulk import: {e}")
+        return jsonify({
+            "success": False,
+            "error": f"Bulk import failed: {str(e)}"
+        }), 500
+    
+def split_bulk_text_into_entries(bulk_text):
+    """
+    Smart splitting of bulk text into individual diary entries
+    Looks for date patterns and natural breaks
+    """
+    entries = []
+    
+    # Common date patterns people use in diaries
+    date_patterns = [
+        r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})',  # 1/1/2024, 01-01-24
+        r'(\d{4}[/-]\d{1,2}[/-]\d{1,2})',    # 2024/1/1, 2024-01-01
+        r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}',  # January 1, 2024
+        r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}',  # Jan 1, 2024
+        r'(\d{1,2}\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})',  # 1 January 2024
+        r'(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+\w+\s+\d{1,2}',  # Monday, January 1
+    ]
+    
+    # Try to split by dates first
+    lines = bulk_text.split('\n')
+    current_entry = ""
+    current_date = datetime.now().date()
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        
+        # Check if this line contains a date
+        found_date = None
+        for pattern in date_patterns:
+            match = re.search(pattern, line, re.IGNORECASE)
+            if match:
+                try:
+                    date_str = match.group(1) if match.lastindex >= 1 else match.group(0)
+                    found_date = parse_flexible_date(date_str)
+                    break
+                except:
+                    continue
+        
+        # If we found a date and have accumulated text, save previous entry
+        if found_date and current_entry.strip():
+            entries.append({
+                'text': current_entry.strip(),
+                'date': current_date
+            })
+            current_entry = ""
+            current_date = found_date
+        
+        # Add this line to current entry
+        current_entry += line + "\n"
+        
+        # If we found a date, update current_date
+        if found_date:
+            current_date = found_date
+    
+    # Don't forget the last entry
+    if current_entry.strip():
+        entries.append({
+            'text': current_entry.strip(),
+            'date': current_date
+        })
+    
+    # If no dates were found, try splitting by paragraph breaks or line count
+    if len(entries) <= 1:
+        entries = split_by_paragraphs_or_length(bulk_text)
+    
+    return entries
+
+
+def split_by_paragraphs_or_length(bulk_text):
+    """
+    Fallback splitting when no dates are found
+    Split by double line breaks or every ~3-5 lines
+    """
+    entries = []
+    
+    # Try splitting by double line breaks first (paragraph breaks)
+    paragraphs = re.split(r'\n\s*\n', bulk_text)
+    
+    if len(paragraphs) > 1:
+        # Use paragraph breaks
+        base_date = datetime.now().date()
+        for i, paragraph in enumerate(paragraphs):
+            if paragraph.strip() and len(paragraph.strip()) > 20:
+                # Space entries out by days
+                entry_date = base_date - timedelta(days=len(paragraphs) - i - 1)
+                entries.append({
+                    'text': paragraph.strip(),
+                    'date': entry_date
+                })
+    else:
+        # Split by line count (every 3-5 lines becomes an entry)
+        lines = [line.strip() for line in bulk_text.split('\n') if line.strip()]
+        current_entry = ""
+        line_count = 0
+        base_date = datetime.now().date()
+        entry_number = 0
+        
+        for line in lines:
+            current_entry += line + "\n"
+            line_count += 1
+            
+            # Create entry every 3-5 lines or if we hit a natural break
+            if line_count >= 3 and (line_count >= 5 or line.endswith('.') or line.endswith('!')):
+                if len(current_entry.strip()) > 20:
+                    entry_date = base_date - timedelta(days=entry_number)
+                    entries.append({
+                        'text': current_entry.strip(),
+                        'date': entry_date
+                    })
+                    entry_number += 1
+                
+                current_entry = ""
+                line_count = 0
+        
+        # Don't forget remaining text
+        if current_entry.strip() and len(current_entry.strip()) > 20:
+            entry_date = base_date - timedelta(days=entry_number)
+            entries.append({
+                'text': current_entry.strip(),
+                'date': entry_date
+            })
+    
+    return entries
+
+
+def parse_flexible_date(date_str):
+    """
+    Parse various date formats into a date object
+    """
+    import dateutil.parser
+    
+    try:
+        # Use dateutil for flexible parsing
+        return dateutil.parser.parse(date_str).date()
+    except:
+        # Fallback to manual parsing for common formats
+        try:
+            # Try MM/DD/YYYY or MM-DD-YYYY
+            if '/' in date_str or '-' in date_str:
+                separator = '/' if '/' in date_str else '-'
+                parts = date_str.split(separator)
+                if len(parts) == 3:
+                    month, day, year = parts
+                    if len(year) == 2:
+                        year = '20' + year if int(year) < 50 else '19' + year
+                    return datetime(int(year), int(month), int(day)).date()
+        except:
+            pass
+        
+        # If all else fails, return today
+        return datetime.now().date()
 
 
 @app.route('/api/entries/<int:entry_id>', methods=['DELETE'])

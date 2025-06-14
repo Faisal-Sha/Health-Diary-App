@@ -1,9 +1,10 @@
 import React from 'react';
 import './HeroSection.css';
 
-function HeroSection() {
+// UPDATED: Add setCurrentView prop and onClick handlers
+function HeroSection({ setCurrentView }) {
     return(
-        <div className = "hero-container">
+        <div className="hero-container">
             {/* Animated background */}
             <div className="hero-bg">
                 <div className="floating-shapes">
@@ -30,7 +31,7 @@ function HeroSection() {
 
                 <p className="hero-subtitle">
                     Revolutionary health analytics combining <strong>GPT-4 AI</strong>, 
-                    <strong> statistical analysis</strong>, and <strong>medical research</strong> 
+                    <strong> statistical analysis</strong>, and <strong>medical research </strong> 
                     to provide personalized health insights you've never seen before.
                 </p>
 
@@ -54,13 +55,19 @@ function HeroSection() {
                     </div>
                 </div>
 
-                {/* Call to action */}
+                {/* Call to action - UPDATED: Add onClick handlers */}
                 <div className="hero-cta">
-                    <button className="cta-primary">
+                    <button 
+                        className="cta-primary"
+                        onClick={() => setCurrentView && setCurrentView('list')}
+                    >
                         <span className="cta-icon">✨</span>
                         Experience AI Health Analysis
                     </button>
-                    <button className="cta-secondary">
+                    <button 
+                        className="cta-secondary"
+                        onClick={() => setCurrentView && setCurrentView('charts')}
+                    >
                         <span className="cta-icon">🔬</span>
                         View Technology Demo
                     </button>

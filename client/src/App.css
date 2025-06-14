@@ -194,3 +194,248 @@ p {
   50% { opacity: 0.7; }
   100% { opacity: 1; }
 }
+
+/* Home Page Layout */
+.home-page {
+  /* No specific styles needed - just a container */
+}
+
+/* Feature Showcase Section */
+.feature-showcase-section {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.feature-showcase-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.feature-showcase-title {
+  fontSize: 2.5rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 20px;
+}
+
+.feature-showcase-subtitle {
+  font-size: 1.2rem;
+  color: #6c757d;
+  margin-bottom: 60px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Feature Cards Grid */
+.feature-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  margin-bottom: 60px;
+}
+
+.feature-card {
+  background: white;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.feature-card:hover::before {
+  left: 100%;
+}
+
+.feature-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  border-color: #667eea;
+}
+
+.feature-card-icon {
+  font-size: 3rem;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 2;
+}
+
+.feature-card-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 15px;
+  position: relative;
+  z-index: 2;
+}
+
+.feature-card-description {
+  color: #6c757d;
+  line-height: 1.6;
+  margin: 0 0 15px 0;
+  position: relative;
+  z-index: 2;
+}
+
+.feature-card-cta {
+  font-size: 0.9rem;
+  color: #667eea;
+  font-weight: 600;
+  position: relative;
+  z-index: 2;
+  transition: all 0.3s ease;
+}
+
+.feature-card:hover .feature-card-cta {
+  color: #5a67d8;
+  transform: translateX(5px);
+}
+
+/* Call to Action Section */
+.feature-showcase-cta {
+  background: linear-gradient(135deg, #1534bf 0%, #4dadd9 100%);
+  border-radius: 20px;
+  padding: 40px;
+  color: white;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-showcase-cta::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+  transform: rotate(45deg);
+  transition: transform 0.6s ease;
+}
+
+.feature-showcase-cta:hover::before {
+  transform: rotate(45deg) translate(50%, 50%);
+}
+
+.cta-title {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+  position: relative;
+  z-index: 2;
+}
+
+.cta-subtitle {
+  font-size: 1.1rem;
+  margin-bottom: 30px;
+  opacity: 0.9;
+  position: relative;
+  z-index: 2;
+}
+
+.cta-button {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  padding: 15px 40px;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  position: relative;
+  z-index: 2;
+}
+
+.cta-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.cta-button:active {
+  transform: translateY(-1px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .feature-showcase-section {
+    padding: 60px 15px;
+  }
+  
+  .feature-showcase-title {
+    font-size: 2rem;
+  }
+  
+  .feature-showcase-subtitle {
+    font-size: 1.1rem;
+    margin-bottom: 40px;
+  }
+  
+  .feature-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+  
+  .feature-card {
+    padding: 25px;
+  }
+  
+  .feature-card-title {
+    font-size: 1.2rem;
+  }
+  
+  .feature-showcase-cta {
+    padding: 30px 20px;
+  }
+  
+  .cta-title {
+    font-size: 1.5rem;
+  }
+  
+  .cta-button {
+    padding: 12px 30px;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .feature-showcase-title {
+    font-size: 1.8rem;
+  }
+  
+  .feature-card-icon {
+    font-size: 2.5rem;
+  }
+  
+  .feature-card {
+    padding: 20px;
+  }
+  
+  .cta-title {
+    font-size: 1.3rem;
+  }
+  
+  .cta-subtitle {
+    font-size: 1rem;
+  }
+}
