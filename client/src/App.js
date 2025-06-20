@@ -16,6 +16,7 @@ function App() {
   const [diaryEntries, setDiaryEntries] = useState([]); //all the diary entries
   const [currentView, setCurrentView] = useState('list'); //track which view we are in: list or calendar
   const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString()); //track which date we are looking at
+  const [lastEntryTimestamp, setLastEntryTimestamp] = useState(Date.now());
 
   
   const [isLoading, setIsLoading] = useState(false);
@@ -87,7 +88,7 @@ function App() {
       // Send to backend (with AI processing)
       const result = await apiService.createEntry(diaryText, new Date().toISOString().split('T')[0]);
       
-      // Create a backend-style entry object, then convert it properly
+      // Create a backend-style entry object
       const backendStyleEntry = {
         id: result.entry_id,
         entry_text: diaryText,
@@ -108,6 +109,9 @@ function App() {
       // Add to the top of the list (newest first)
       setDiaryEntries([newEntry, ...diaryEntries]);
       setDiaryText('');
+      
+      
+      setLastEntryTimestamp(Date.now());
       
       alert(`Entry Saved! AI Confidence: ${Math.round((newEntry.aiConfidence || 0) * 100)}%`);
       
@@ -145,6 +149,7 @@ function App() {
     }
   };
 
+
   const handleDataImport = (newEntries, action = 'add') => {
     if (action === 'replace') {
       // Replace all entries (used by clear functions)
@@ -152,12 +157,15 @@ function App() {
       if (newEntries.length === 0) {
         console.log('🗑️ All data cleared!');
       } else {
-        console.log(`📊 Data replaced with ${newEntries.length} entries`);
+        console.log(`📊 Imported ${newEntries.length} entries`);
+        setLastEntryTimestamp(Date.now());
       }
     } else {
-      // Add new entries (default behavior)
-      setDiaryEntries([...newEntries, ...diaryEntries]);
-      alert(`📥 Successfully imported ${newEntries.length} demo entries!`);
+      // Add new entries
+      setDiaryEntries([...diaryEntries, ...newEntries]);
+      console.log(`📊 Added ${newEntries.length} new entries`);
+      // 🔥 NEW: Update timestamp when adding entries
+      setLastEntryTimestamp(Date.now());
     }
   };
 
@@ -372,7 +380,7 @@ function App() {
 
       {/* Analytics View */}
       {currentView === 'analytics' && (
-        <WeeklyInsights />
+        <WeeklyInsights lastEntryTimestamp={lastEntryTimestamp} />
       )}
 
       {/* Show saved entries for list and calendar views */}

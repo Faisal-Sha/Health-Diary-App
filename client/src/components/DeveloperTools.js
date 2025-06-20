@@ -1,6 +1,7 @@
 import React from 'react';
 import DataImport from './DataImport';
 import BulkTextImport from './BulkTextImport';
+import FileImport from './FileImport';
 import './DeveloperTools.css';
 
 function DeveloperTools({ onImportData, currentEntries, allEntries, onDataImported }) {
@@ -49,6 +50,19 @@ function DeveloperTools({ onImportData, currentEntries, allEntries, onDataImport
 
             {/* Tools Grid */}
             <div className="dev-tools-grid">
+
+                {/* File Import Section - NEW! */}
+                <div className="tool-section">
+                    <div className="tool-header">
+                        <h3 className="tool-title">📁 File Import System</h3>
+                        <p className="tool-description">
+                            Import diary entries from CSV, JSON, Excel, Word documents, and text files
+                        </p>
+                    </div>
+                    <div className="tool-content">
+                        <FileImport onImportComplete={onDataImported} />
+                    </div>
+                </div>
                 
                 {/* Demo Data Import Section */}
                 <div className="tool-section">

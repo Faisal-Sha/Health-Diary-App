@@ -1,31 +1,103 @@
 import React, { useState, useEffect } from 'react';
 import './WeeklyInsights.css';
 
-function WeeklyInsights() {
+function WeeklyInsights({ lastEntryTimestamp }) {
     const [summaryData, setSummaryData] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [lastUpdated, setLastUpdated] = useState(null);
+    const [isUsingCache, setIsUsingCache] = useState(false);
 
-    // Load analytics data when component mounts
+    // Cache management functions
+    const getCacheKey = () => 'health_insights_cache';
+    const getTimestampKey = () => 'health_insights_timestamp';
+
+    const getCachedData = () => {
+        try {
+            const cached = localStorage.getItem(getCacheKey());
+            const timestamp = localStorage.getItem(getTimestampKey());
+            
+            if (cached && timestamp) {
+                return {
+                    data: JSON.parse(cached),
+                    timestamp: timestamp,
+                    cacheTimestamp: parseInt(timestamp)
+                };
+            }
+        } catch (error) {
+            console.error('Error reading cache:', error);
+        }
+        return null;
+    };
+
+    const setCachedData = (data, timestamp) => {
+        try {
+            localStorage.setItem(getCacheKey(), JSON.stringify(data));
+            localStorage.setItem(getTimestampKey(), timestamp.toString());
+            console.log('✅ AI insights cached successfully');
+        } catch (error) {
+            console.error('Error saving cache:', error);
+        }
+    };
+
+    const shouldRefreshCache = () => {
+        const cached = getCachedData();
+        
+        // No cache exists - need to fetch
+        if (!cached) {
+            console.log('🔄 No cache found, fetching fresh data...');
+            return true;
+        }
+
+        // Check if new entries were added since last cache
+        if (lastEntryTimestamp && lastEntryTimestamp > cached.cacheTimestamp) {
+            console.log('🔄 New diary entries detected, refreshing insights...');
+            return true;
+        }
+
+        // Cache is still valid
+        console.log('✅ Using cached AI insights (no new entries)');
+        return false;
+    };
+
+    // Load analytics data when component mounts or when entries are updated
     useEffect(() => {
         loadWeeklySummary();
-    }, []);
+    }, [lastEntryTimestamp]); // Re-run when new entries are added
 
-    const loadWeeklySummary = async () => {
-        setIsLoading(true);
+    const loadWeeklySummary = async (forceRefresh = false) => {
         setError(null);
         
+        // Check if we can use cached data (unless forcing refresh)
+        if (!forceRefresh && !shouldRefreshCache()) {
+            const cached = getCachedData();
+            if (cached) {
+                setSummaryData(cached.data);
+                setLastUpdated(new Date(cached.cacheTimestamp).toLocaleString());
+                setIsUsingCache(true);
+                return;
+            }
+        }
+
+        // Fetch fresh data from API
+        setIsLoading(true);
+        setIsUsingCache(false);
+        
         try {
-            console.log('🔄 Loading weekly analytics...');
+            console.log('🔄 Loading fresh weekly analytics...');
             
             const response = await fetch('http://localhost:5001/api/analytics/weekly-summary');
             const data = await response.json();
             
             if (data.success) {
+                const now = Date.now();
                 setSummaryData(data.summary);
                 setLastUpdated(new Date().toLocaleString());
-                console.log('✅ Analytics loaded successfully:', data.summary);
+                
+                // Cache the results
+                setCachedData(data.summary, now);
+                
+                console.log('✅ Fresh analytics loaded and cached:', data.summary);
             } else {
                 throw new Error(data.error || 'Failed to load analytics');
             }
@@ -33,63 +105,39 @@ function WeeklyInsights() {
         } catch (error) {
             console.error('❌ Error loading analytics:', error);
             setError(error.message);
+            
+            // Try to fall back to cached data if available
+            const cached = getCachedData();
+            if (cached) {
+                console.log('⚠️ Using cached data as fallback');
+                setSummaryData(cached.data);
+                setLastUpdated(new Date(cached.cacheTimestamp).toLocaleString());
+                setIsUsingCache(true);
+                setError(`Network error - showing cached data from ${new Date(cached.cacheTimestamp).toLocaleString()}`);
+            }
         } finally {
             setIsLoading(false);
         }
     };
 
-    // Helper function to get color for health metrics based on value and type
-    const getMetricColor = (value, metricType) => {
-        if (!value) return '#95a5a6';
-        
-        switch(metricType) {
-            case 'mood':
-            case 'energy':
-                // Higher is better (1-10 scale)
-                if (value >= 7) return '#27ae60';      // Good - Green
-                if (value >= 5) return '#f39c12';      // Okay - Orange  
-                return '#e74c3c';                      // Poor - Red
-                
-            case 'pain':
-            case 'stress':
-                // Lower is better (0-10 scale)
-                if (value <= 3) return '#27ae60';      // Good - Green
-                if (value <= 6) return '#f39c12';      // Moderate - Orange
-                return '#e74c3c';                      // High - Red
-                
-            case 'sleep':
-                // Hours of sleep
-                if (value >= 7) return '#27ae60';      // Good - Green
-                if (value >= 6) return '#f39c12';      // Okay - Orange
-                return '#e74c3c';                      // Poor - Red
-                
-            default:
-                return '#3498db';
+    const handleRefresh = () => {
+        loadWeeklySummary(true); // Force refresh
+    };
+
+    const clearCache = () => {
+        try {
+            localStorage.removeItem(getCacheKey());
+            localStorage.removeItem(getTimestampKey());
+            setSummaryData(null);
+            setLastUpdated(null);
+            setIsUsingCache(false);
+            console.log('🗑️ Cache cleared');
+        } catch (error) {
+            console.error('Error clearing cache:', error);
         }
     };
 
-    // Helper function to get trend emoji
-    const getTrendEmoji = (trend) => {
-        switch(trend) {
-            case 'improving': return '📈';
-            case 'declining': return '📉';
-            case 'stable': return '➡️';
-            default: return '❓';
-        }
-    };
-
-    // Helper function to format metric names
-    const formatMetricName = (metric) => {
-        const names = {
-            'mood': 'Mood',
-            'energy': 'Energy Level', 
-            'pain': 'Pain Level',
-            'sleep': 'Sleep Quality',
-            'stress': 'Stress Level'
-        };
-        return names[metric] || metric;
-    };
-
+    // Loading state
     if (isLoading) {
         return (
             <div className="analytics-dashboard">
@@ -99,23 +147,25 @@ function WeeklyInsights() {
                 </div>
                 <div className="loading-analytics">
                     <div className="loading-spinner"></div>
-                    <p>🤖 AI is analyzing your health data...</p>
+                    <h3>🤖 Analyzing Your Health Data...</h3>
+                    <p>GPT-4 is processing your diary entries and finding patterns...</p>
                 </div>
             </div>
         );
     }
 
-    if (error) {
+    // Error state
+    if (error && !summaryData) {
         return (
             <div className="analytics-dashboard">
                 <div className="analytics-header">
-                    <h2>🧠 Weekly Health Insights</h2>
-                    <p>AI-powered analysis of your health patterns</p>
+                <h2>🧠 Weekly Health Insights</h2>
+                <p>AI-powered analysis of your health patterns</p>
                 </div>
                 <div className="analytics-error">
                     <h3>⚠️ Unable to Generate Insights</h3>
                     <p>{error}</p>
-                    <button onClick={loadWeeklySummary} className="retry-btn">
+                    <button onClick={handleRefresh} className="retry-btn">
                         🔄 Try Again
                     </button>
                 </div>
@@ -140,6 +190,42 @@ function WeeklyInsights() {
 
     const { period, health_metrics, correlations, insights } = summaryData;
 
+    // Helper function to safely format numbers
+    const formatMetricValue = (value, defaultText = 'N/A') => {
+        if (value === null || value === undefined) return defaultText;
+        if (typeof value === 'number' && !isNaN(value)) {
+            return value.toFixed(1);
+        }
+        if (typeof value === 'string' && !isNaN(parseFloat(value))) {
+            return parseFloat(value).toFixed(1);
+        }
+        return defaultText;
+    };
+
+    // Helper function to get color for health metrics based on value and type
+    const getMetricColor = (value, metricType) => {
+        if (!value) return '#95a5a6';
+        
+        switch(metricType) {
+            case 'mood':
+            case 'energy':
+                // Higher is better (1-10 scale)
+                if (value >= 7) return '#27ae60';      // Good - Green
+                if (value >= 5) return '#f39c12';      // Okay - Orange  
+                return '#e74c3c';                      // Poor - Red
+                
+            case 'pain':
+            case 'stress':
+                // Lower is better (0-10 scale)
+                if (value <= 3) return '#27ae60';      // Good - Green
+                if (value <= 6) return '#f39c12';      // Okay - Orange
+                return '#e74c3c';                      // Poor - Red
+                
+            default:
+                return '#3498db';                      // Neutral - Blue
+        }
+    };
+
     return (
         <div className="analytics-dashboard">
             {/* Header Section */}
@@ -156,68 +242,103 @@ function WeeklyInsights() {
                     {lastUpdated && (
                         <span className="last-updated">
                             🕒 Updated: {lastUpdated}
+                            {isUsingCache && <span className="cache-indicator"> (cached)</span>}
                         </span>
                     )}
                 </div>
-                <button onClick={loadWeeklySummary} className="refresh-btn">
-                    🔄 Refresh Analysis
-                </button>
+                <div className="analytics-controls">
+                    <button 
+                        onClick={handleRefresh} 
+                        className="refresh-btn"
+                        disabled={isLoading}
+                    >
+                        🔄 Refresh Insights
+                    </button>
+                    <button 
+                        onClick={clearCache} 
+                        className="clear-cache-btn"
+                        title="Clear cached data"
+                    >
+                        🗑️ Clear Cache
+                    </button>
+                </div>
+                {error && isUsingCache && (
+                    <div className="cache-warning">
+                        ⚠️ {error}
+                    </div>
+                )}
             </div>
 
             {/* Health Metrics Overview */}
             <div className="metrics-overview">
                 <h3>📊 Health Metrics Summary</h3>
                 <div className="metrics-grid">
-                    {Object.entries(health_metrics).map(([metric, data]) => (
-                        <div key={metric} className="metric-card">
-                            <div className="metric-header">
-                                <h4>{formatMetricName(metric)}</h4>
-                                {data.trend && (
-                                    <span className="trend-indicator">
-                                        {getTrendEmoji(data.trend)}
-                                    </span>
-                                )}
-                            </div>
-                            <div className="metric-value">
-                                <span 
-                                    className="value-number"
-                                    style={{ 
-                                        color: getMetricColor(
-                                            data.average || data.average_hours, 
-                                            metric
-                                        ) 
-                                    }}
-                                >
-                                    {data.average || data.average_hours || 'N/A'}
-                                </span>
-                                <span className="value-scale">
-                                    {data.scale || '/10'}
-                                </span>
-                            </div>
-                            {data.trend && data.trend !== 'stable' && (
-                                <div className="trend-text">
-                                    <small>
-                                        {data.trend === 'improving' ? '↗️ Improving' : '↘️ Declining'}
-                                    </small>
-                                </div>
-                            )}
+                    <div className="metric-card">
+                        <h4>😊 Average Mood</h4>
+                        <div 
+                            className="metric-value"
+                            style={{ color: getMetricColor(health_metrics.mood?.average, 'mood') }}
+                        >
+                            {formatMetricValue(health_metrics.mood?.average)}/10
                         </div>
-                    ))}
+                        <span className="metric-trend">{health_metrics.mood?.trend || 'stable'}</span>
+                    </div>
+                    
+                    <div className="metric-card">
+                        <h4>⚡ Average Energy</h4>
+                        <div 
+                            className="metric-value"
+                            style={{ color: getMetricColor(health_metrics.energy?.average, 'energy') }}
+                        >
+                            {formatMetricValue(health_metrics.energy?.average)}/10
+                        </div>
+                        <span className="metric-trend">{health_metrics.energy?.trend || 'stable'}</span>
+                    </div>
+                    
+                    <div className="metric-card">
+                        <h4>🤕 Average Pain</h4>
+                        <div 
+                            className="metric-value"
+                            style={{ color: getMetricColor(health_metrics.pain?.average, 'pain') }}
+                        >
+                            {formatMetricValue(health_metrics.pain?.average)}/10
+                        </div>
+                        <span className="metric-trend">{health_metrics.pain?.trend || 'stable'}</span>
+                    </div>
+                    
+                    <div className="metric-card">
+                        <h4>😴 Average Sleep</h4>
+                        <div className="metric-value" style={{ color: '#3498db' }}>
+                            {formatMetricValue(health_metrics.sleep?.average_hours)}h
+                        </div>
+                        <span className="metric-trend">nightly</span>
+                    </div>
+                    
+                    <div className="metric-card">
+                        <h4>😰 Average Stress</h4>
+                        <div 
+                            className="metric-value"
+                            style={{ color: getMetricColor(health_metrics.stress?.average, 'stress') }}
+                        >
+                            {formatMetricValue(health_metrics.stress?.average)}/10
+                        </div>
+                        <span className="metric-trend">{health_metrics.stress?.trend || 'stable'}</span>
+                    </div>
                 </div>
             </div>
 
-            {/* Correlations Section */}
+            {/* Correlations */}
             {correlations && correlations.length > 0 && (
                 <div className="correlations-section">
-                    <h3>🔍 Pattern Analysis</h3>
-                    <p className="section-description">
-                        Relationships found between your health metrics:
-                    </p>
-                    <div className="correlations-list">
+                    <h3>🔗 Health Pattern Correlations</h3>
+                    <div className="correlations-grid">
                         {correlations.map((correlation, index) => (
                             <div key={index} className="correlation-card">
                                 <div className="correlation-header">
-                                    <span className="correlation-strength">
+                                    <span className="correlation-metrics">
+                                        {correlation.metric1} ↔ {correlation.metric2}
+                                    </span>
+                                    <span className={`correlation-strength ${correlation.strength}`}>
                                         {correlation.strength === 'strong' ? '🔴' : 
                                          correlation.strength === 'moderate' ? '🟡' : '🟢'}
                                         {correlation.strength.toUpperCase()} CORRELATION
@@ -240,11 +361,11 @@ function WeeklyInsights() {
                 <h3>🤖 AI Health Analysis</h3>
                 
                 {/* Key Findings */}
-                {insights.key_findings && insights.key_findings.length > 0 && (
+                {insights.key_insights && insights.key_insights.length > 0 && (
                     <div className="insights-subsection">
-                        <h4>💡 Key Findings</h4>
+                        <h4>💡 Key Insights</h4>
                         <div className="insights-list">
-                            {insights.key_findings.map((finding, index) => (
+                            {insights.key_insights.map((finding, index) => (
                                 <div key={index} className="insight-item key-finding">
                                     <span className="insight-icon">🔍</span>
                                     <p>{finding}</p>

@@ -580,71 +580,89 @@ def bulk_import_entries():
     
 def split_bulk_text_into_entries(bulk_text):
     """
-    Smart splitting of bulk text into individual diary entries
-    Looks for date patterns and natural breaks
+    Fixed version: More accurate splitting of bulk text into individual diary entries
     """
     entries = []
     
-    # Common date patterns people use in diaries
+    # Enhanced date patterns with stricter matching
     date_patterns = [
-        r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})',  # 1/1/2024, 01-01-24
-        r'(\d{4}[/-]\d{1,2}[/-]\d{1,2})',    # 2024/1/1, 2024-01-01
-        r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}',  # January 1, 2024
-        r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}',  # Jan 1, 2024
-        r'(\d{1,2}\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})',  # 1 January 2024
-        r'(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+\w+\s+\d{1,2}',  # Monday, January 1
+        r'^\*\*([^*]+)\*\*$',  # **June 19, 2025** (Markdown bold dates)
+        r'^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}$',  # January 1, 2024
+        r'^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}$',  # Jan 1, 2024
+        r'^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$',  # 1/1/2024, 01-01-24
+        r'^\d{4}[/-]\d{1,2}[/-]\d{1,2}$',    # 2024/1/1, 2024-01-01
     ]
     
-    # Try to split by dates first
+    # Split by lines and process
     lines = bulk_text.split('\n')
     current_entry = ""
-    current_date = datetime.now().date()
+    current_date = None
     
     for line in lines:
         line = line.strip()
+        
+        # Skip empty lines
         if not line:
             continue
         
-        # Check if this line contains a date
+        # Check if this line is ONLY a date (not mixed content)
+        is_date_line = False
         found_date = None
+        
         for pattern in date_patterns:
-            match = re.search(pattern, line, re.IGNORECASE)
+            match = re.match(pattern, line, re.IGNORECASE)
             if match:
                 try:
-                    date_str = match.group(1) if match.lastindex >= 1 else match.group(0)
+                    # Extract date string
+                    if pattern.startswith(r'^\*\*'):
+                        # Extract from **date** format
+                        date_str = match.group(1)
+                    else:
+                        date_str = match.group(0)
+                    
                     found_date = parse_flexible_date(date_str)
+                    is_date_line = True
+                    print(f"📅 Found date line: '{line}' -> {found_date}")
                     break
-                except:
+                except Exception as e:
+                    print(f"❌ Date parse error for '{line}': {e}")
                     continue
         
-        # If we found a date and have accumulated text, save previous entry
-        if found_date and current_entry.strip():
+        # If we found a new date and have accumulated text, save previous entry
+        if is_date_line and current_entry.strip():
             entries.append({
                 'text': current_entry.strip(),
-                'date': current_date
+                'date': current_date or datetime.now().date()
             })
+            print(f"✅ Saved entry for {current_date}: {len(current_entry)} chars")
             current_entry = ""
-            current_date = found_date
         
-        # Add this line to current entry
-        current_entry += line + "\n"
-        
-        # If we found a date, update current_date
-        if found_date:
+        # Update current date if we found one
+        if is_date_line:
             current_date = found_date
+        else:
+            # Add content line to current entry
+            current_entry += line + "\n"
     
     # Don't forget the last entry
     if current_entry.strip():
         entries.append({
             'text': current_entry.strip(),
-            'date': current_date
+            'date': current_date or datetime.now().date()
         })
+        print(f"✅ Saved final entry for {current_date}: {len(current_entry)} chars")
     
-    # If no dates were found, try splitting by paragraph breaks or line count
-    if len(entries) <= 1:
-        entries = split_by_paragraphs_or_length(bulk_text)
+    print(f"📊 Split result: {len(entries)} entries total")
+    
+    # If we got unexpected results, log details
+    if len(entries) != 7:
+        print(f"⚠️ Expected 7 entries, got {len(entries)}")
+        for i, entry in enumerate(entries):
+            print(f"  Entry {i+1}: {entry['date']} - {len(entry['text'])} chars")
+            print(f"    Preview: {entry['text'][:100]}...")
     
     return entries
+
 
 
 def split_by_paragraphs_or_length(bulk_text):
@@ -706,31 +724,57 @@ def split_by_paragraphs_or_length(bulk_text):
 
 def parse_flexible_date(date_str):
     """
-    Parse various date formats into a date object
+    Enhanced date parsing with better error handling
     """
-    import dateutil.parser
+    # Remove markdown formatting
+    date_str = date_str.replace('*', '').strip()
     
     try:
-        # Use dateutil for flexible parsing
-        return dateutil.parser.parse(date_str).date()
-    except:
-        # Fallback to manual parsing for common formats
-        try:
-            # Try MM/DD/YYYY or MM-DD-YYYY
-            if '/' in date_str or '-' in date_str:
-                separator = '/' if '/' in date_str else '-'
-                parts = date_str.split(separator)
-                if len(parts) == 3:
-                    month, day, year = parts
-                    if len(year) == 2:
-                        year = '20' + year if int(year) < 50 else '19' + year
-                    return datetime(int(year), int(month), int(day)).date()
-        except:
-            pass
+        # Try using dateutil first (most flexible)
+        from dateutil import parser
+        parsed_date = parser.parse(date_str).date()
+        print(f"✅ Parsed '{date_str}' -> {parsed_date}")
+        return parsed_date
+    except ImportError:
+        print("⚠️ dateutil not available, using manual parsing")
+    except Exception as e:
+        print(f"❌ dateutil failed for '{date_str}': {e}")
+    
+    # Manual parsing fallbacks
+    try:
+        # Handle MM/DD/YYYY or MM-DD-YYYY
+        if '/' in date_str or '-' in date_str:
+            separator = '/' if '/' in date_str else '-'
+            parts = date_str.split(separator)
+            if len(parts) == 3:
+                month, day, year = parts
+                if len(year) == 2:
+                    year = '20' + year if int(year) < 50 else '19' + year
+                result = datetime(int(year), int(month), int(day)).date()
+                print(f"✅ Manual parse '{date_str}' -> {result}")
+                return result
         
-        # If all else fails, return today
-        return datetime.now().date()
-
+        # Handle "Month DD, YYYY" format
+        import re
+        month_match = re.match(r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})', date_str, re.IGNORECASE)
+        if month_match:
+            month_name, day, year = month_match.groups()
+            month_num = {
+                'january': 1, 'february': 2, 'march': 3, 'april': 4,
+                'may': 5, 'june': 6, 'july': 7, 'august': 8,
+                'september': 9, 'october': 10, 'november': 11, 'december': 12
+            }[month_name.lower()]
+            result = datetime(int(year), month_num, int(day)).date()
+            print(f"✅ Month name parse '{date_str}' -> {result}")
+            return result
+            
+    except Exception as e:
+        print(f"❌ Manual parsing failed for '{date_str}': {e}")
+    
+    # If all else fails, return today
+    fallback = datetime.now().date()
+    print(f"⚠️ Using fallback date for '{date_str}' -> {fallback}")
+    return fallback
 
 @app.route('/api/entries/<int:entry_id>', methods=['DELETE'])
 def delete_entry(entry_id):

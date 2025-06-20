@@ -590,3 +590,145 @@
         display: none;
     }
 }
+
+/* Analytics controls */
+.analytics-controls {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    align-items: center;
+}
+
+.refresh-btn, .clear-cache-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.refresh-btn {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+}
+
+.refresh-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2980b9, #1f5582);
+    transform: translateY(-1px);
+}
+
+.refresh-btn:disabled {
+    background: #bdc3c7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.clear-cache-btn {
+    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+    color: white;
+    font-size: 12px;
+    padding: 6px 12px;
+}
+
+.clear-cache-btn:hover {
+    background: linear-gradient(135deg, #7f8c8d, #5d6d7e);
+    transform: translateY(-1px);
+}
+
+/* Cache indicator */
+.cache-indicator {
+    color: #7f8c8d;
+    font-size: 12px;
+    font-style: italic;
+}
+
+/* Cache warning */
+.cache-warning {
+    background: #fff3cd;
+    color: #856404;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-top: 8px;
+    font-size: 14px;
+    border-left: 4px solid #ffc107;
+}
+
+/* Loading analytics */
+.loading-analytics {
+    text-align: center;
+    padding: 60px 20px;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 12px;
+    margin: 20px 0;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e9ecef;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-analytics h3 {
+    color: #2c3e50;
+    margin: 0 0 12px;
+    font-size: 20px;
+}
+
+.loading-analytics p {
+    color: #7f8c8d;
+    margin: 0;
+    font-size: 16px;
+}
+
+/* Enhanced period info */
+.period-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 12px;
+    align-items: center;
+}
+
+.period-info span {
+    background: rgba(52, 152, 219, 0.1);
+    color: #2980b9;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.last-updated {
+    background: rgba(46, 204, 113, 0.1) !important;
+    color: #27ae60 !important;
+}
+
+/* Better responsive design for controls */
+@media (max-width: 768px) {
+    .analytics-controls {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .refresh-btn, .clear-cache-btn {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .period-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+}
