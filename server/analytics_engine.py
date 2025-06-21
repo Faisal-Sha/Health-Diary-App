@@ -55,7 +55,7 @@ class HealthAnalyticsEngine:
     def get_weekly_data(self, user_id: int = 1, weeks_back: int = 1) -> List[Dict]:
         """
         Get health data for the specified number of weeks back
-        Returns raw data that we'll analyze
+        Returns raw data that we'll analyze - FIXED: Complete SQL query
         """
         conn = self.get_db_connection()
         if not conn:
@@ -68,8 +68,12 @@ class HealthAnalyticsEngine:
             end_date = datetime.now().date()
             start_date = end_date - timedelta(weeks=weeks_back)
             
+            print(f"🔍 Querying for data between {start_date} and {end_date}")
+            
+            # FIXED: Complete the SQL query that was cut off
             query = """
                 SELECT 
+                    re.id,
                     re.entry_date,
                     re.entry_text,
                     re.created_at,
@@ -91,7 +95,18 @@ class HealthAnalyticsEngine:
             cursor.execute(query, (user_id, start_date, end_date))
             results = cursor.fetchall()
             
+            print(f"✅ Found {len(results)} entries for analysis")
+            
+            # Debug: Print date range of found entries
+            if results:
+                dates = [r['entry_date'] for r in results]
+                print(f"📅 Entry dates found: {min(dates)} to {max(dates)}")
+            
             return [dict(row) for row in results]
+            
+        except Exception as e:
+            print(f"❌ Error in get_weekly_data: {e}")
+            return []
             
         finally:
             cursor.close()
@@ -102,6 +117,7 @@ class HealthAnalyticsEngine:
         Calculate basic statistical measures from the health data
         This is our foundation before AI analysis
         """
+        print('Basic Stats Data:', data)
         if not data:
             return {}
         
@@ -358,11 +374,10 @@ class HealthAnalyticsEngine:
        
     def generate_ai_insights(self, stats: Dict, correlations: List[Dict], raw_data: List[Dict]) -> Dict:
         """
-        Neutral AI insights generation - let the AI discover patterns without hints
-        Tests true analytical capabilities by providing only raw data
+        AI insights generation focused on ACUTE TRIGGERS - FIXED to prioritize specific triggers
         """
         
-        # Prepare raw data without cultural hints or context
+        # Prepare raw data focusing on trigger identification
         data_summary = {
             'analysis_period': f"{stats.get('date_range', {}).get('start')} to {stats.get('date_range', {}).get('end')}",
             'total_entries': stats.get('total_entries', 0),
@@ -381,146 +396,99 @@ class HealthAnalyticsEngine:
             ]
         }
         
-        # Completely neutral prompt - no cultural context, no hints about role or demographics
-        neutral_prompt = f"""Analyze this health tracking dataset and provide comprehensive insights. You are given diary entries with associated health metrics over a tracking period.
+        # ACUTE TRIGGER-FOCUSED PROMPT - prioritizes specific environmental/situational triggers
+        acute_trigger_prompt = f"""You are a specialized health pattern analyst focused on identifying ACUTE TRIGGERS that cause immediate or same-day health impacts.
+
+    YOUR SPECIFIC TASK: Analyze the diary entries to identify specific, acute triggers that correlate with negative health symptoms or mood changes.
+
+    ACUTE TRIGGERS TO LOOK FOR:
+    🍽️ FOOD TRIGGERS: Specific foods, food combinations, meal timing, food preparation methods
+    🌤️ WEATHER TRIGGERS: Temperature changes, humidity, barometric pressure, seasonal changes
+    🌸 ENVIRONMENTAL TRIGGERS: Pollen, air quality, allergens, dust, strong scents
+    💬 SOCIAL TRIGGERS: Arguments, conflicts, difficult conversations, social stress
+    📍 LOCATION TRIGGERS: Specific places that correlate with symptoms
+    ⏰ TIMING TRIGGERS: Time of day patterns, schedule disruptions
+    🏃 ACTIVITY TRIGGERS: Specific exercises, movements, or physical activities
+
+    IGNORE CHRONIC PATTERNS: Do not focus on general stress levels, ongoing conditions, or long-term lifestyle patterns. Focus on specific, identifiable triggers that happened on or before symptom days.
 
     DATA FOR ANALYSIS:
     {json.dumps(data_summary, indent=2, default=str)}
 
-    ANALYSIS TASK:
-    Perform deep pattern analysis and provide insights. Each insight section must contain 4-5 detailed sentences that demonstrate thorough analytical thinking and pattern recognition from the provided data.
+    ANALYSIS INSTRUCTIONS:
+    1. Examine each diary entry for mentions of specific foods, weather conditions, social events, or environmental factors
+    2. Look for correlations between these specific triggers and same-day or next-day health score changes
+    3. Identify trigger timing patterns (e.g., "symptoms appear 2-4 hours after eating X")
+    4. Focus on actionable, avoidable triggers rather than general stress or lifestyle factors
 
     Output your analysis in this JSON format:
 
     {{
         "overall_health_score": [1-10 integer based on data patterns],
         "key_insights": [
-            "First major insight: Analyze the most significant behavioral or health patterns you can identify from the diary entries. Include specific evidence from the data and explain the implications for overall wellbeing.",
-            "Second major insight: Examine relationships between activities, routines, and health outcomes. Identify patterns in timing, frequency, or sequences that impact the tracked metrics.",
-            "Third major insight: Analyze emotional and stress patterns in relation to reported activities and circumstances. Include specific examples of triggers and recovery patterns.",
-            "Fourth major insight: Examine physical health patterns, including pain, energy, and sleep relationships. Identify activities or circumstances that correlate with physical symptoms.",
-            "Fifth major insight: Analyze any subtle or delayed correlations between specific activities, food consumption, or environmental factors and subsequent health symptoms."
+            "Acute trigger insight 1: Identify the most specific environmental or situational trigger that correlates with negative health outcomes. Include exact foods, weather conditions, or social situations with timing details.",
+            "Acute trigger insight 2: Analyze specific timing patterns for triggers - when do symptoms appear relative to trigger exposure? Include evidence from diary entries.",
+            "Acute trigger insight 3: Identify any food-related acute triggers, including specific ingredients, meal combinations, or eating patterns that precede symptoms.",
+            "Acute trigger insight 4: Examine environmental triggers like weather changes, allergens, or location-based factors that correlate with health score drops.",
+            "Acute trigger insight 5: Analyze social or situational acute triggers - specific events, interactions, or circumstances that immediately impact mood or physical symptoms."
         ],
         "potential_triggers": [
-            "Primary trigger pattern: Identify the most significant trigger for negative health outcomes based on diary analysis. Include specific evidence, timing patterns, and physiological or psychological mechanisms.",
-            "Secondary trigger pattern: Analyze additional triggers that consistently correlate with decreased wellbeing, mood drops, or physical symptoms. Include frequency and severity analysis.",
-            "Subtle trigger pattern: Identify any less obvious triggers that may have delayed effects or require pattern recognition across multiple days. Include timing analysis and potential mechanisms.",
-            "Environmental/social trigger pattern: Analyze triggers related to interpersonal interactions, social situations, or environmental factors that impact health metrics."
+            "PRIMARY ACUTE TRIGGER: [Specific food/weather/social trigger] - Appears [X times] in dataset, correlates with [specific symptoms/health score changes]. Pattern: [specific timing/context details]",
+            "SECONDARY ACUTE TRIGGER: [Another specific trigger] - Evidence: [specific diary mentions], Impact: [measurable health changes], Timing: [when symptoms appear relative to trigger]",
+            "ENVIRONMENTAL TRIGGER: [Weather/pollen/location factor] - Correlation with [specific symptoms], Frequency: [how often observed], Context: [environmental conditions]",
+            "SOCIAL/SITUATIONAL TRIGGER: [Specific social situation or stressor] - Impact on [mood/energy/pain scores], Pattern: [when and how it affects health metrics]"
         ],
         "recommendations": [
-            "Primary intervention recommendation: Based on the strongest identified patterns, provide specific, actionable interventions with implementation details and expected outcomes.",
-            "Secondary intervention recommendation: Address additional identified issues with specific strategies, timing, and measurable goals for improvement.",
-            "Monitoring recommendation: Suggest specific additional data points or tracking methods to better understand identified patterns or test intervention effectiveness.",
-            "Lifestyle optimization recommendation: Provide comprehensive recommendations for optimizing daily routines based on identified patterns of what works well versus what creates problems.",
-            "Prevention recommendation: Suggest specific strategies to prevent identified triggers or minimize their impact when they cannot be avoided entirely."
+            "ACUTE TRIGGER AVOIDANCE: Based on identified [specific trigger], recommend [specific avoidance strategy] with [implementation details and expected timeline for improvement]",
+            "TRIGGER MONITORING: Track [specific environmental factors/foods/situations] more closely using [specific tracking methods] to confirm trigger patterns",
+            "SYMPTOM MITIGATION: When [specific trigger] cannot be avoided, implement [specific coping strategies] within [timeframe] to minimize health impact"
         ],
         "areas_of_concern": [
-            "Primary concern: Identify the most significant health risk or sustainability issue based on current patterns. Include potential long-term consequences if patterns continue.",
-            "Secondary concern: Analyze additional areas requiring attention based on trend analysis and pattern recognition from the diary data.",
-            "Emerging concern: Identify any developing patterns or early warning signs that could become problematic if not addressed."
+            "High-frequency acute trigger: [Specific trigger that appears frequently and consistently causes symptoms]",
+            "Delayed trigger effects: [Triggers that show delayed symptom onset, making them harder to identify]"
         ],
         "positive_patterns": [
-            "Strongest positive pattern: Identify the most beneficial behavioral or health pattern that should be maintained and potentially expanded.",
-            "Secondary positive pattern: Analyze additional positive patterns that contribute to good health outcomes and explain their mechanisms.",
-            "Resilience pattern: Identify patterns that demonstrate effective coping, recovery, or adaptation strategies that can be leveraged.",
-            "Optimization opportunity: Identify positive patterns that could be enhanced or expanded for even better health outcomes."
-        ],
-        "data_quality_note": "Assessment of data completeness, consistency, and reliability for pattern analysis. Note any limitations or areas where additional data would improve analysis accuracy."
-    }}
-
-    ANALYSIS REQUIREMENTS:
-    - Base all insights strictly on patterns observable in the provided diary entries and metrics
-    - Identify who this person likely is and what their role/responsibilities are based solely on diary content
-    - Look for timing patterns, correlations, and cause-effect relationships
-    - Identify any food-symptom correlations with attention to delayed effects (hours later)
-    - Analyze routine patterns and their health impacts
-    - Examine interpersonal dynamics and their health effects
-    - Consider cumulative effects and sustainability of observed patterns
-    - Look for subtle patterns that may not be obvious to the diary writer
-    - Each insight must be substantiated with specific evidence from the data
-    - Provide actionable recommendations based on identified patterns
-    - Consider both immediate and long-term health implications
-
-    Demonstrate advanced pattern recognition and analytical reasoning based purely on the provided data."""
+            "Trigger-free periods: [Patterns when specific triggers are avoided and health improves]",
+            "Effective coping: [Evidence of successful trigger management or mitigation strategies]"
+        ]
+    }}"""
 
         try:
-            # Try multiple models to see which performs best for this analytical task
-            models_to_try = [
-                "gpt-4o",           # Latest GPT-4
-                "gpt-4-turbo",      # GPT-4 Turbo
-                "claude-3-opus",    # Claude 3 Opus (if available)
-                "gpt-4"             # Standard GPT-4
-            ]
+            print("🤖 Generating acute trigger-focused AI insights...")
             
-            for model in models_to_try:
-                try:
-                    response = self.openai_client.chat.completions.create(
-                        model=model,
-                        messages=[{"role": "user", "content": neutral_prompt}],
-                        temperature=0.1,  # Low temperature for analytical consistency
-                        max_tokens=4000   # Allow comprehensive analysis
-                    )
-                    
-                    ai_response = response.choices[0].message.content.strip()
-                    
-                    # Clean up response
-                    if ai_response.startswith('```json'):
-                        ai_response = ai_response.strip('```json').strip('```')
-                    elif ai_response.startswith('```'):
-                        ai_response = ai_response.strip('```')
-                    
-                    result = json.loads(ai_response)
-                    print(f"✅ AI insights generated successfully using {model}")
-                    return result
-                    
-                except Exception as model_error:
-                    print(f"❌ Model {model} failed: {model_error}")
-                    continue
+            response = self.openai_client.chat.completions.create(
+                model="gpt-4o",
+                messages=[{"role": "user", "content": acute_trigger_prompt}],
+                temperature=0.1,
+                max_tokens=2500  # More tokens for detailed trigger analysis
+            )
             
-            # If all models fail, raise the last error
-            raise Exception("All AI models failed to generate insights")
+            ai_response = response.choices[0].message.content.strip()
+            
+            # Clean response
+            if ai_response.startswith('```json'):
+                ai_response = ai_response.strip('```json').strip('```')
+            elif ai_response.startswith('```'):
+                ai_response = ai_response.strip('```')
+                
+            result = json.loads(ai_response)
+            
+            print("✅ AI insights generated successfully")
+            print(f"🎯 Generated {len(result.get('potential_triggers', []))} potential acute triggers")
+            
+            return result
             
         except Exception as e:
-            print(f"❌ AI insight generation error: {e}")
-            print(f"📊 Data summary was: {data_summary}")
-            
-            # Analytical fallback that still demonstrates pattern recognition
+            print(f"❌ AI insights generation error: {e}")
+            # Fallback with basic structure
             return {
-                "overall_health_score": 7,
-                "key_insights": [
-                    f"Pattern analysis of {stats.get('total_entries', 0)} diary entries reveals a person with significant daily responsibilities involving food preparation and household management. The entries consistently mention extensive cooking activities, family meal preparation, and managing multiple people's food preferences, suggesting a primary caregiver role. Sleep patterns show remarkable consistency with 9-hour blocks, indicating good sleep hygiene that supports the demanding daily schedule. Energy levels fluctuate in correlation with workload demands and family interaction quality.",
-                    "Detailed routine analysis shows a structured daily pattern: consistent wake time around 9 AM, morning tea ritual, lunch preparation around 12-1 PM, and dinner at 8 PM. The person demonstrates significant culinary skills with complex meal preparation requiring 2-4 hours daily. Activity patterns suggest this individual manages household food needs for multiple people, with mentions of making 6-12 portions and accommodating various preferences. Time investment in food preparation appears substantial and physically demanding.",
-                    "Interpersonal dynamics analysis reveals stress patterns related to criticism and appreciation cycles. Entries show mood improvements when efforts are acknowledged and mood decreases when criticized or when excessive demands are made. Family member interactions significantly impact emotional wellbeing, with specific mentions of demanding behavior and occasional helpful cooperation. Social dynamics appear to center around food provision and family satisfaction with meals.",
-                    "Physical health pattern analysis identifies clear correlations between extended cooking activities and physical strain symptoms. Back pain, shoulder soreness, and fatigue consistently follow lengthy food preparation sessions. Standing for 2-4 hours during cooking correlates with lower body fatigue and neck stiffness from repetitive motions. Physical symptoms appear cumulative, with strain building across consecutive high-demand cooking days.",
-                    "Subtle correlation analysis identifies potential delayed food-symptom relationships requiring further investigation. Two instances show headache occurrences approximately 3-4 hours after consuming clarified butter (ghee), though causation is not definitive with limited data points. This pattern appears on different days with similar timing, suggesting possible sensitivity that warrants systematic tracking for confirmation."
-                ],
-                "potential_triggers": [
-                    "Primary stress trigger: Extended cooking sessions lasting 2-4 hours consistently correlate with physical strain symptoms and energy depletion. Analysis shows complex meal preparation demands coincide with back pain, shoulder soreness, and fatigue. The pattern suggests cumulative physical stress from prolonged standing, repetitive motions, and heavy lifting during food preparation activities.",
-                    "Interpersonal stress trigger: Family criticism and excessive demands create measurable impacts on mood and stress levels. Specific instances show mood drops following negative feedback about food or unrealistic requests for immediate meal preparation. Recovery occurs when appreciation is expressed or assistance is provided, indicating emotional wellbeing strongly tied to family dynamics.",
-                    "Potential dietary trigger: Pattern analysis suggests possible sensitivity to clarified butter consumption, with headaches occurring 3-4 hours post-consumption on multiple occasions. While correlation does not confirm causation, the timing consistency warrants systematic monitoring to determine if this represents a genuine sensitivity requiring dietary modification.",
-                    "Workload accumulation trigger: Days with multiple complex cooking tasks show compounding effects on energy and physical comfort. The data suggests insufficient recovery time between demanding cooking sessions leads to strain accumulation and reduced resilience for subsequent high-demand activities."
-                ],
-                "recommendations": [
-                    "Implement systematic workload distribution and physical strain prevention: Establish mandatory rest breaks during extended cooking sessions, introduce family assistance rotations for meal preparation, and modify kitchen ergonomics to reduce physical stress. Consider batch cooking strategies to reduce daily preparation time and physical demands.",
-                    "Develop family communication protocols to improve interpersonal dynamics: Create structured appreciation practices for meal preparation efforts, establish reasonable boundaries around food requests, and implement collaborative meal planning to reduce criticism and increase cooperation. Regular family meetings about household responsibilities could improve dynamics.",
-                    "Conduct systematic dietary correlation tracking: Monitor clarified butter consumption timing and any subsequent headache occurrences over 2-3 weeks to confirm or rule out sensitivity. If pattern confirms, test alternative cooking fats to determine if symptoms resolve. Maintain detailed timing logs for accurate correlation analysis.",
-                    "Optimize daily routine for sustainability: Introduce strategic meal simplification on high-stress days, establish prep-ahead systems to reduce daily cooking time, and create buffer time between major cooking activities to prevent strain accumulation. Consider time-blocking for meal preparation to maintain boundaries.",
-                    "Enhance health monitoring for pattern optimization: Track specific physical strain indicators (pain location, intensity, duration) in relation to cooking activities. Monitor family interaction quality and its correlation with stress levels. Add preparation time tracking to identify efficiency opportunities and strain prevention strategies."
-                ],
-                "areas_of_concern": [
-                    "Physical sustainability of current workload: Daily 2-4 hour cooking sessions without adequate recovery may lead to chronic pain development if ergonomic improvements and workload distribution are not implemented. Current patterns show cumulative strain that could worsen without intervention.",
-                    "Emotional dependency on family approval: Strong correlation between family feedback and emotional wellbeing suggests vulnerability to criticism and potential burnout if appreciation doesn't improve. Current pattern may not be sustainable long-term without better interpersonal boundaries.",
-                    "Potential undiagnosed food sensitivity: If clarified butter correlation confirms through systematic tracking, continued exposure without recognition could lead to worsening symptoms or additional sensitivities developing over time."
-                ],
-                "positive_patterns": [
-                    "Exceptional sleep consistency providing health foundation: The stable 9-hour sleep schedule from 12 AM to 9 AM demonstrates excellent sleep hygiene that supports resilience through demanding daily responsibilities. This consistent rest pattern appears to enable sustained high-level functioning.",
-                    "Advanced culinary skills and nutritional variety: Demonstrated ability to prepare complex, varied meals shows significant expertise and provides excellent nutritional diversity. The cultural food knowledge and cooking skills represent valuable health assets for family nutrition.",
-                    "Effective stress recovery through appreciation: Clear pattern shows rapid mood and energy recovery when efforts are acknowledged, indicating strong resilience capacity and positive response to supportive interactions. This suggests good emotional regulation when environment is supportive.",
-                    "Adaptive problem-solving abilities: Evidence of creative meal solutions, efficient leftover utilization, and flexible planning demonstrates strong coping skills that can be leveraged for workload optimization and stress management strategies."
-                ],
-                "data_quality_note": "Analysis based on 7 days of highly detailed diary entries with excellent qualitative depth including activity descriptions, interpersonal interactions, physical symptoms, and emotional responses. Data consistency and detail level sufficient for meaningful pattern analysis, though longer tracking period would strengthen correlation confidence for suspected dietary sensitivities."
+                "overall_health_score": 5,
+                "key_insights": ["Unable to generate insights due to processing error"],
+                "potential_triggers": ["Analysis error - check data quality"],
+                "recommendations": ["Verify diary entry content and try again"],
+                "areas_of_concern": ["AI processing failed"],
+                "positive_patterns": ["Unable to analyze patterns"]
             }
-
     
     # Fixed generate_weekly_summary method
     def generate_weekly_summary(self, user_id: int = 1) -> HealthSummary:
