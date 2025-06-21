@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 @dataclass
 class HealthSummary:
-    """Data structure for health summary results"""
+    """Data structure for health summary results - UPDATED with all fields"""
     period_start: str
     period_end: str
     total_entries: int
@@ -28,9 +28,15 @@ class HealthSummary:
     pain_trend: str
     energy_trend: str
     correlations: List[Dict]
-    potential_triggers: List[Dict]
-    insights: List[str]
+    potential_triggers: List[str]  # FIXED: Changed from List[Dict] to List[str]
+    insights: List[str]  # This stores key_insights
     recommendations: List[str]
+    # ADDED: Missing fields
+    areas_of_concern: List[str]
+    positive_patterns: List[str]
+
+
+
 
 class HealthAnalyticsEngine:
     def __init__(self, database_url: str, openai_api_key: str):
@@ -516,10 +522,11 @@ class HealthAnalyticsEngine:
             }
 
     
+    # Fixed generate_weekly_summary method
     def generate_weekly_summary(self, user_id: int = 1) -> HealthSummary:
         """
         Main function to generate complete weekly health summary
-        This orchestrates all our analysis steps
+        FIXED: Properly stores all AI insight fields
         """
         print("🔄 Generating weekly health summary...")
         
@@ -541,8 +548,10 @@ class HealthAnalyticsEngine:
         # Step 4: Generate AI insights
         ai_insights = self.generate_ai_insights(stats, correlations, raw_data)
         print("🤖 Generated AI insights")
+        print(f"🔍 AI insights keys: {list(ai_insights.keys())}")
         
         # Step 5: Compile everything into HealthSummary object
+        # FIXED: Properly extract all fields from AI insights
         summary = HealthSummary(
             period_start=stats.get('date_range', {}).get('start', ''),
             period_end=stats.get('date_range', {}).get('end', ''),
@@ -556,16 +565,23 @@ class HealthAnalyticsEngine:
             pain_trend=stats.get('pain', {}).get('trend', 'stable'),
             energy_trend=stats.get('energy', {}).get('trend', 'stable'),
             correlations=correlations,
-            potential_triggers=ai_insights.get('potential_triggers', []),
+            # FIXED: Properly extract all AI insight fields
             insights=ai_insights.get('key_insights', []),
-            recommendations=ai_insights.get('recommendations', [])
+            potential_triggers=ai_insights.get('potential_triggers', []),
+            recommendations=ai_insights.get('recommendations', []),
+            areas_of_concern=ai_insights.get('areas_of_concern', []),
+            positive_patterns=ai_insights.get('positive_patterns', [])
         )
         
         print("✅ Weekly summary generated successfully")
+        print(f"🔍 Summary insights count: {len(summary.insights)}")
+        print(f"🔍 Summary areas of concern count: {len(summary.areas_of_concern)}")
+        print(f"🔍 Summary positive patterns count: {len(summary.positive_patterns)}")
+        
         return summary
 
     def _create_empty_summary(self) -> HealthSummary:
-        """Create empty summary when no data is available"""
+        """Create empty summary when no data is available - UPDATED"""
         return HealthSummary(
             period_start="",
             period_end="", 
@@ -580,6 +596,9 @@ class HealthAnalyticsEngine:
             energy_trend="no_data",
             correlations=[],
             potential_triggers=[],
-            insights=["Insufficient data for analysis. Continue tracking to generate insights."],
-            recommendations=["Add more diary entries throughout the week for better analysis."]
+            insights=["Insufficient data for analysis."],
+            recommendations=["Add more diary entries for better analysis."],
+            # ADDED: Empty values for new fields
+            areas_of_concern=[],
+            positive_patterns=[]
         )

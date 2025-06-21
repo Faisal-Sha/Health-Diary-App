@@ -39,16 +39,38 @@ def get_db_connection():
         print(f"Database connection error: {e}")
         return None
 
-def extract_health_data_with_ai(diary_text):
-    """Extract structured health data using ChatGPT"""
-    prompt = f"""You are a health data extraction specialist. Analyze the following health diary entry and extract structured information.
+def extract_health_data_with_ai(diary_text, user_id=1, entry_date=None):
+    """Enhanced AI extraction with temporal context for delayed health effects"""
+    
+    # Get temporal context (last 2-3 days for delayed effects)
+    temporal_context = get_temporal_context(user_id, entry_date)
+    
+    # Build enhanced prompt with temporal awareness
+    enhanced_prompt = f"""You are a health data extraction specialist with expertise in temporal health patterns and delayed health effects.
 
-DIARY ENTRY: "{diary_text}"
+TEMPORAL CONTEXT (for identifying delayed effects):
+{format_temporal_context(temporal_context)}
+
+CURRENT DIARY ENTRY TO ANALYZE: "{diary_text}"
+
+CRITICAL TEMPORAL ANALYSIS GUIDELINES:
+- Look for delayed effects: food/activities from yesterday affecting today's symptoms
+- Consider timing: evening activities affecting next morning symptoms  
+- Track cumulative effects: repeated exposures building up over days
+- Identify trigger patterns: specific foods/activities consistently followed by symptoms
+- Consider sleep quality: how yesterday's events affected last night's sleep
+
+SPECIFIC DELAYED EFFECT PATTERNS TO WATCH FOR:
+- Food consumed 3-8 hours ago causing digestive issues, headaches, or energy changes
+- High-fat foods (ghee, fried items) from previous evening causing morning headaches
+- Stressful events from yesterday affecting today's mood/energy
+- Physical strain from yesterday causing today's pain/stiffness
+- Late eating affecting sleep quality and next-day energy
 
 Extract and return ONLY valid JSON in this exact format:
 {{
   "mood_score": [1-10 number or null],
-  "energy_level": [1-10 number or null],
+  "energy_level": [1-10 number or null], 
   "pain_level": [0-10 number or null],
   "sleep_quality": [1-10 number or null],
   "sleep_hours": [number of hours or null],
@@ -60,48 +82,183 @@ Extract and return ONLY valid JSON in this exact format:
   "triggers": [array of potential trigger strings or empty array],
   "medications": [array of strings or empty array],
   "locations": [array of strings or empty array],
-  "confidence": [0.0-1.0 number indicating extraction confidence]
+  "confidence": [0.0-1.0 number indicating extraction confidence],
+  
+  "temporal_analysis": {{
+    "delayed_food_effects": [
+      {{"food": "specific food", "consumed_when": "yesterday evening/this morning", "potential_symptom": "headache/nausea/energy_drop", "confidence": "low/medium/high"}}
+    ],
+    "cumulative_stress_effects": [
+      {{"stressor": "activity/situation", "building_since": "date", "current_impact": "description"}}
+    ],
+    "sleep_impact_from_yesterday": {{
+      "yesterday_factors_affecting_sleep": ["factors that influenced last night's sleep"],
+      "sleep_quality_correlation": "how yesterday impacted sleep"
+    }},
+    "physical_strain_carryover": {{
+      "yesterday_activities": ["physical activities from yesterday"],
+      "today_physical_effects": ["current pain/stiffness potentially from yesterday"]
+    }},
+    "pattern_recognition": {{
+      "repeated_food_symptom_pattern": "description of any recurring food-symptom timing",
+      "behavioral_health_pattern": "recurring activity-health outcome pattern",
+      "trigger_confidence_level": "low/medium/high based on pattern consistency"
+    }}
+  }}
 }}
 
-CRITICAL SCORING GUIDELINES:
+SCORING GUIDELINES:
 - mood_score: 1=very depressed/sad, 5=neutral, 10=extremely happy/great
 - energy_level: 1=exhausted/no energy, 5=normal energy, 10=very energetic
 - pain_level: 0=no pain at all, 5=moderate pain, 10=severe/unbearable pain
 - sleep_quality: 1=terrible sleep/insomnia, 5=okay sleep, 10=excellent restful sleep
-- sleep_hours: actual number of hours slept (e.g., 7.5, 8, 4)
-- stress_level: 0=completely relaxed/no stress, 5=normal stress, 10=extremely stressed/overwhelmed
+- sleep_hours: actual number of hours slept
+- stress_level: 0=completely relaxed, 5=normal stress, 10=extremely stressed
+
+TEMPORAL CORRELATION INSTRUCTIONS:
+- If current symptoms match patterns from temporal context, note in delayed_food_effects
+- Consider timing: ghee/heavy fats 4-8 hours before symptoms = medium confidence correlation
+- Look for cumulative patterns: same trigger → same symptom across multiple days = high confidence
+- Note negative correlations: absence of usual triggers with absence of usual symptoms
+- Consider compound effects: multiple factors from yesterday contributing to today's state
 
 If information is not mentioned or unclear, use null for numbers and empty arrays for lists."""
 
     try:
         response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1  # Low temperature for consistent extraction
+            model="gpt-4o",  # Use best model for complex temporal analysis
+            messages=[{"role": "user", "content": enhanced_prompt}],
+            temperature=0.1,
+            max_tokens=2000  # Allow more tokens for temporal analysis
         )
         
         ai_response = response.choices[0].message.content.strip()
+        
+        # Clean up response
+        if ai_response.startswith('```json'):
+            ai_response = ai_response.strip('```json').strip('```')
+        elif ai_response.startswith('```'):
+            ai_response = ai_response.strip('```')
+            
         return json.loads(ai_response)
     
     except Exception as e:
         print(f"AI processing error: {e}")
-        # Return basic fallback data
-        return {
-            "mood_score": None,
-            "energy_level": None,
-            "pain_level": None,
-            "sleep_quality": None,
-            "sleep_hours": None,
-            "stress_level": None,
-            "symptoms": [],
-            "activities": [],
-            "food_intake": [],
-            "social_interactions": None,
-            "triggers": [],
-            "medications": [],
-            "locations": [],
-            "confidence": 0.0
+        return get_fallback_data()
+
+def get_temporal_context(user_id, current_entry_date=None, days_back=3):
+    """Get recent entries for temporal context analysis"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return []
+        
+        cursor = conn.cursor()
+        
+        # If no entry date provided, use today
+        if current_entry_date is None:
+            current_entry_date = datetime.now().date()
+        elif isinstance(current_entry_date, str):
+            current_entry_date = datetime.fromisoformat(current_entry_date).date()
+        
+        # Get entries from the last few days (excluding current date)
+        start_date = current_entry_date - timedelta(days=days_back)
+        end_date = current_entry_date  # Exclude current date
+        
+        query = """
+            SELECT 
+                re.entry_date,
+                re.entry_text,
+                re.created_at,
+                hm.mood_score,
+                hm.energy_level,
+                hm.pain_level,
+                hm.sleep_quality,
+                hm.sleep_hours,
+                hm.stress_level
+            FROM raw_entries re
+            LEFT JOIN health_metrics hm ON re.id = hm.raw_entry_id
+            WHERE re.user_id = %s 
+            AND re.entry_date >= %s 
+            AND re.entry_date < %s
+            ORDER BY re.entry_date DESC, re.created_at DESC
+        """
+        
+        cursor.execute(query, (user_id, start_date, end_date))
+        results = cursor.fetchall()
+        
+        return [dict(row) for row in results]
+        
+    except Exception as e:
+        print(f"Error getting temporal context: {e}")
+        return []
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+def format_temporal_context(temporal_data):
+    """Format temporal context for AI prompt"""
+    if not temporal_data:
+        return "No recent entries available for temporal analysis."
+    
+    formatted_context = "RECENT HEALTH HISTORY:\n"
+    
+    for entry in temporal_data:
+        date = entry['entry_date']
+        text = entry['entry_text']
+        
+        # Add health metrics if available
+        metrics = []
+        if entry.get('mood_score'):
+            metrics.append(f"mood: {entry['mood_score']}/10")
+        if entry.get('energy_level'):
+            metrics.append(f"energy: {entry['energy_level']}/10")
+        if entry.get('pain_level'):
+            metrics.append(f"pain: {entry['pain_level']}/10")
+        if entry.get('sleep_hours'):
+            metrics.append(f"sleep: {entry['sleep_hours']}hrs")
+        
+        metrics_str = f" [{', '.join(metrics)}]" if metrics else ""
+        
+        formatted_context += f"\n{date}{metrics_str}:\n{text[:200]}{'...' if len(text) > 200 else ''}\n"
+    
+    return formatted_context
+
+def get_fallback_data():
+    """Enhanced fallback data with temporal structure"""
+    return {
+        "mood_score": None,
+        "energy_level": None,
+        "pain_level": None,
+        "sleep_quality": None,
+        "sleep_hours": None,
+        "stress_level": None,
+        "symptoms": [],
+        "activities": [],
+        "food_intake": [],
+        "social_interactions": None,
+        "triggers": [],
+        "medications": [],
+        "locations": [],
+        "confidence": 0.0,
+        "temporal_analysis": {
+            "delayed_food_effects": [],
+            "cumulative_stress_effects": [],
+            "sleep_impact_from_yesterday": {
+                "yesterday_factors_affecting_sleep": [],
+                "sleep_quality_correlation": ""
+            },
+            "physical_strain_carryover": {
+                "yesterday_activities": [],
+                "today_physical_effects": []
+            },
+            "pattern_recognition": {
+                "repeated_food_symptom_pattern": "",
+                "behavioral_health_pattern": "",
+                "trigger_confidence_level": "low"
+            }
         }
+    }
 
 # API Routes
 
@@ -116,17 +273,20 @@ def health_check():
 
 @app.route('/api/entries', methods=['POST'])
 def create_entry():
-    """Create a new diary entry with AI processing"""
+    """Create a new diary entry with temporal-aware AI processing"""
     try:
         data = request.get_json()
         diary_text = data.get('text', '')
         entry_date = data.get('date', datetime.now().date().isoformat())
+        user_id = data.get('user_id', 1)  # ✅ FIX: Get user_id from request
         
         if not diary_text.strip():
             return jsonify({"error": "Entry text cannot be empty"}), 400
         
-        # Process text with AI
-        ai_data = extract_health_data_with_ai(diary_text)
+        print(f"🔄 Processing entry for user {user_id} on {entry_date}")
+        
+        # Process text with enhanced temporal-aware AI
+        ai_data = extract_health_data_with_ai(diary_text, user_id, entry_date)
         
         # Save to database
         conn = get_db_connection()
@@ -141,7 +301,7 @@ def create_entry():
                 INSERT INTO raw_entries (user_id, entry_text, entry_date, created_at)
                 VALUES (%s, %s, %s, %s)
                 RETURNING id
-            """, (1, diary_text, entry_date, datetime.now()))  # user_id=1 for now
+            """, (user_id, diary_text, entry_date, datetime.now()))  # ✅ FIX: Use user_id variable
             
             raw_entry_id = cursor.fetchone()['id']
             
@@ -155,7 +315,7 @@ def create_entry():
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             """, (
-                1, raw_entry_id, entry_date,
+                user_id, raw_entry_id, entry_date,  # ✅ FIX: Use user_id variable
                 ai_data.get('mood_score'), ai_data.get('energy_level'),
                 ai_data.get('pain_level'), ai_data.get('sleep_quality'),
                 ai_data.get('sleep_hours'), ai_data.get('stress_level'),
@@ -166,11 +326,19 @@ def create_entry():
             
             conn.commit()
             
+            print(f"✅ Entry saved successfully")
+            print(f"🔍 Temporal patterns detected: {len(ai_data.get('temporal_analysis', {}).get('delayed_food_effects', []))}")
+            
             return jsonify({
                 "success": True,
                 "entry_id": raw_entry_id,
-                "health_metric_id": health_metric_id,
-                "ai_extracted_data": ai_data
+                "health_metric_id": health_metric_id,  # ✅ ADDED: Include this for completeness
+                "ai_confidence": ai_data.get('confidence', 0.0),
+                "temporal_insights": {
+                    "delayed_effects_detected": len(ai_data.get('temporal_analysis', {}).get('delayed_food_effects', [])),
+                    "pattern_confidence": ai_data.get('temporal_analysis', {}).get('pattern_recognition', {}).get('trigger_confidence_level', 'low')
+                },
+                "message": "Entry processed with temporal health analysis"
             })
             
         finally:
@@ -178,8 +346,387 @@ def create_entry():
             conn.close()
             
     except Exception as e:
-        print(f"Error creating entry: {e}")
+        print(f"❌ Error creating entry: {e}")
         return jsonify({"error": "Failed to create entry"}), 500
+
+
+def extract_health_data_with_ai(diary_text, user_id=1, entry_date=None):
+    """Complete AI extraction with both context-awareness and temporal analysis"""
+    
+    # STEP 1: First categorize what this entry is primarily about
+    categorization_prompt = f"""Analyze this diary entry and determine its primary focus areas.
+
+DIARY ENTRY: "{diary_text}"
+
+Categorize the main themes (mark as true/false):
+Return ONLY JSON:
+{{
+  "primary_themes": {{
+    "food_focused": [true if significant food/eating content],
+    "relationship_focused": [true if family/social interactions prominent],  
+    "physical_symptoms": [true if pain/illness prominent],
+    "sleep_focused": [true if sleep quality/patterns discussed],
+    "work_stress": [true if work/professional stress mentioned],
+    "exercise_activity": [true if physical activity mentioned],
+    "mood_emotions": [true if emotional states prominent]
+  }},
+  "complexity_level": ["simple", "moderate", "complex"],
+  "analysis_depth_needed": ["basic", "enhanced", "comprehensive"]
+}}"""
+
+    try:
+        # Get categorization first
+        categorization_response = openai_client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": categorization_prompt}],
+            temperature=0.1,
+            max_tokens=300
+        )
+        
+        categorization_text = categorization_response.choices[0].message.content.strip()
+        if categorization_text.startswith('```json'):
+            categorization_text = categorization_text.strip('```json').strip('```')
+        
+        categorization = json.loads(categorization_text)
+        themes = categorization.get('primary_themes', {})
+        
+        print(f"🔍 Entry themes detected: {[k for k, v in themes.items() if v]}")
+        
+        # STEP 2: Get temporal context (previous days)
+        temporal_context = get_temporal_context(user_id, entry_date)
+        print(f"📅 Retrieved {len(temporal_context)} previous entries for temporal context")
+        
+        # STEP 3: Build adaptive prompt based on both context and temporal data
+        adaptive_prompt = build_complete_adaptive_prompt(diary_text, themes, temporal_context)
+        
+        # STEP 4: Get full analysis with smart prompt
+        analysis_response = openai_client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": adaptive_prompt}],
+            temperature=0.1,
+            max_tokens=2000  # Allow more tokens for comprehensive analysis
+        )
+        
+        ai_response = analysis_response.choices[0].message.content.strip()
+        
+        # Clean and parse response
+        if ai_response.startswith('```json'):
+            ai_response = ai_response.strip('```json').strip('```')
+        elif ai_response.startswith('```'):
+            ai_response = ai_response.strip('```')
+            
+        result = json.loads(ai_response)
+        
+        # Add categorization metadata
+        result['entry_categorization'] = categorization
+        result['temporal_context_used'] = len(temporal_context)
+        
+        return result
+    
+    except Exception as e:
+        print(f"❌ Complete AI processing error: {e}")
+        return get_enhanced_fallback_data()
+
+
+def build_complete_adaptive_prompt(diary_text, themes, temporal_context):
+    """Build the ultimate adaptive prompt with both context and temporal awareness"""
+    
+    # Base prompt with temporal context
+    base_prompt = f"""You are an advanced health data extraction specialist with expertise in temporal health patterns, delayed health effects, and context-aware analysis.
+
+TEMPORAL CONTEXT (for identifying delayed effects):
+{format_temporal_context(temporal_context)}
+
+CURRENT DIARY ENTRY TO ANALYZE: "{diary_text}"
+
+ADAPTIVE ANALYSIS INSTRUCTIONS:
+Based on the entry content, you will provide enhanced analysis for relevant categories.
+Look for both immediate patterns and delayed effects from previous days."""
+
+    # Add context-specific analysis instructions based on themes
+    if themes.get('food_focused'):
+        base_prompt += """
+
+🍽️ ENHANCED FOOD ANALYSIS (entry contains significant food content):
+- Categorize foods by macronutrients (proteins, carbohydrates, fats) without cultural bias
+- Note cooking methods and preparation complexity
+- Identify meal timing patterns and frequency
+- Look for food-symptom timing correlations (especially 3-8 hour delays)
+- Compare with recent eating patterns from temporal context
+- Assess food variety vs repetition patterns
+- Consider cultural cuisine patterns naturally emerging from text"""
+
+    if themes.get('relationship_focused'):
+        base_prompt += """
+
+👥 ENHANCED SOCIAL ANALYSIS (entry contains significant social content):
+- Analyze family dynamics and interpersonal stress patterns
+- Identify social support vs conflict indicators
+- Note impact of social interactions on mood/stress levels
+- Track social meal contexts and their emotional effects
+- Consider cumulative social stress from previous days"""
+
+    if themes.get('physical_symptoms'):
+        base_prompt += """
+
+🩺 ENHANCED SYMPTOM ANALYSIS (entry contains significant physical symptoms):
+- Track symptom timing relative to activities and food consumption
+- Correlate current symptoms with activities from previous days
+- Note pain patterns and potential delayed triggers
+- Identify cumulative physical strain indicators
+- Look for symptom progression or improvement patterns"""
+
+    if themes.get('sleep_focused'):
+        base_prompt += """
+
+😴 ENHANCED SLEEP ANALYSIS (entry discusses sleep patterns):
+- Analyze sleep quality indicators and duration patterns
+- Correlate sleep with previous day's activities, stress, or food
+- Identify factors affecting sleep quality from temporal context
+- Track sleep consistency and its impact on next-day energy"""
+
+    if themes.get('work_stress') or themes.get('mood_emotions'):
+        base_prompt += """
+
+🧠 ENHANCED STRESS/MOOD ANALYSIS (entry contains stress or emotional content):
+- Analyze stress triggers and emotional response patterns
+- Track mood progression and stress accumulation over time
+- Identify coping mechanisms and their effectiveness
+- Correlate emotional states with physical symptoms or food choices"""
+
+    # Standard extraction format with adaptive enhancements
+    base_prompt += f"""
+
+TEMPORAL ANALYSIS GUIDELINES:
+- Look for delayed effects: food/activities from yesterday affecting today's symptoms
+- Consider timing: evening activities affecting next morning symptoms  
+- Track cumulative effects: repeated exposures building up over days
+- Identify trigger patterns: specific foods/activities consistently followed by symptoms
+
+Extract and return ONLY valid JSON in this exact format:
+{{
+  "mood_score": [1-10 number or null],
+  "energy_level": [1-10 number or null], 
+  "pain_level": [0-10 number or null],
+  "sleep_quality": [1-10 number or null],
+  "sleep_hours": [number of hours or null],
+  "stress_level": [0-10 number or null],
+  "symptoms": [array of strings or empty array],
+  "activities": [array of strings or empty array],
+  "food_intake": [array of strings or empty array],
+  "social_interactions": [string description or null],
+  "triggers": [array of potential trigger strings or empty array],
+  "medications": [array of strings or empty array],
+  "locations": [array of strings or empty array],
+  "confidence": [0.0-1.0 number indicating extraction confidence]"""
+
+    # Add enhanced sections based on detected themes
+    enhanced_sections = []
+    
+    if themes.get('food_focused'):
+        enhanced_sections.append('''
+  "enhanced_food_analysis": {{
+    "macronutrient_breakdown": {{
+      "proteins": [specific protein sources identified],
+      "carbohydrates": [carbohydrate sources], 
+      "fats": [fat sources including oils, ghee, nuts]
+    }},
+    "cooking_complexity": "simple/moderate/complex",
+    "meal_timing": {{"breakfast": "time", "lunch": "time", "dinner": "time", "snacks": "times"}},
+    "preparation_methods": [cooking methods like fried, steamed, roasted],
+    "food_variety_today": [unique foods vs repeated from recent days],
+    "potential_delayed_effects": [foods that might cause delayed symptoms based on temporal context]
+  }}''')
+
+    if themes.get('relationship_focused'):
+        enhanced_sections.append('''
+  "enhanced_social_analysis": {{
+    "relationship_dynamics": "description of family/social interactions quality",
+    "social_stress_level": [1-10 rating of social stress intensity],
+    "support_vs_conflict": "supportive/neutral/conflicted",
+    "social_meal_context": "description if meals involved social dynamics",
+    "family_appreciation_level": "description of recognition/criticism patterns"
+  }}''')
+
+    if themes.get('physical_symptoms'):
+        enhanced_sections.append('''
+  "enhanced_symptom_analysis": {{
+    "symptom_timing": "when symptoms occurred relative to activities",
+    "potential_delayed_triggers": [activities/foods from previous days that may have caused current symptoms],
+    "symptom_severity_trend": "improving/stable/worsening compared to recent days",
+    "cumulative_strain_indicators": [signs of building physical stress],
+    "pain_location_specificity": [specific body areas affected]
+  }}''')
+
+    if themes.get('sleep_focused'):
+        enhanced_sections.append('''
+  "enhanced_sleep_analysis": {{
+    "sleep_factors": [factors mentioned that affected sleep quality],
+    "sleep_consistency": "regular/irregular compared to recent pattern",
+    "next_day_energy_correlation": "how sleep affected today's energy levels",
+    "sleep_environment_factors": [bedroom conditions, noise, temperature etc]
+  }}''')
+
+    # Add temporal analysis for all entries
+    enhanced_sections.append('''
+  "temporal_analysis": {{
+    "delayed_food_effects": [
+      {{"food": "specific food", "consumed_when": "yesterday evening/this morning", "potential_symptom": "current symptom", "confidence": "low/medium/high"}}
+    ],
+    "cumulative_stress_effects": [
+      {{"stressor": "ongoing situation", "building_since": "timeframe", "current_impact": "how it affects today"}}
+    ],
+    "pattern_recognition": {{
+      "repeated_food_symptom_pattern": "description of any recurring food-symptom timing patterns",
+      "behavioral_health_pattern": "recurring activity-health outcome patterns",
+      "trigger_confidence_level": "low/medium/high based on pattern consistency across days"
+    }},
+    "recovery_indicators": [signs of improvement or positive changes from previous days]
+  }}''')
+
+    # Add enhanced sections to prompt
+    for section in enhanced_sections:
+        base_prompt += "," + section
+
+    base_prompt += """
+}}
+
+CRITICAL SCORING GUIDELINES:
+- mood_score: 1=very depressed/sad, 5=neutral, 10=extremely happy/great
+- energy_level: 1=exhausted/no energy, 5=normal energy, 10=very energetic
+- pain_level: 0=no pain at all, 5=moderate pain, 10=severe/unbearable pain
+- sleep_quality: 1=terrible sleep/insomnia, 5=okay sleep, 10=excellent restful sleep
+- sleep_hours: actual number of hours slept (e.g., 7.5, 8, 4)
+- stress_level: 0=completely relaxed/no stress, 5=normal stress, 10=extremely stressed
+
+ENHANCED ANALYSIS GUIDELINES:
+- Only provide enhanced analysis for categories relevant to this specific entry
+- Use culture-neutral food analysis - let cuisine patterns emerge naturally
+- Focus on timing relationships and delayed correlations
+- Consider cumulative effects and daily routine impacts
+- Look for patterns across multiple days, not just today
+- Identify both positive and negative health patterns
+
+If information is not mentioned or unclear, use null for numbers and empty arrays for lists."""
+
+    return base_prompt
+
+
+def get_temporal_context(user_id, current_entry_date=None, days_back=3):
+    """Get recent entries for temporal context analysis"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return []
+        
+        cursor = conn.cursor()
+        
+        # Handle date conversion
+        if current_entry_date is None:
+            current_entry_date = datetime.now().date()
+        elif isinstance(current_entry_date, str):
+            current_entry_date = datetime.fromisoformat(current_entry_date).date()
+        
+        # Get entries from the last few days (excluding current date)
+        start_date = current_entry_date - timedelta(days=days_back)
+        end_date = current_entry_date
+        
+        query = """
+            SELECT 
+                re.entry_date,
+                re.entry_text,
+                hm.mood_score,
+                hm.energy_level,
+                hm.pain_level,
+                hm.sleep_hours,
+                hm.stress_level
+            FROM raw_entries re
+            LEFT JOIN health_metrics hm ON re.id = hm.raw_entry_id
+            WHERE re.user_id = %s 
+            AND re.entry_date >= %s 
+            AND re.entry_date < %s
+            ORDER BY re.entry_date DESC
+        """
+        
+        cursor.execute(query, (user_id, start_date, end_date))
+        results = cursor.fetchall()
+        
+        return [dict(row) for row in results]
+        
+    except Exception as e:
+        print(f"Error getting temporal context: {e}")
+        return []
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+
+def format_temporal_context(temporal_data):
+    """Format temporal context for AI prompt"""
+    if not temporal_data:
+        return "No recent entries available for temporal analysis."
+    
+    formatted_context = "RECENT HEALTH HISTORY (for delayed effect analysis):\n"
+    
+    for entry in temporal_data:
+        date = entry['entry_date']
+        text = entry['entry_text']
+        
+        # Add health metrics if available
+        metrics = []
+        if entry.get('mood_score'):
+            metrics.append(f"mood: {entry['mood_score']}/10")
+        if entry.get('energy_level'):
+            metrics.append(f"energy: {entry['energy_level']}/10")
+        if entry.get('pain_level'):
+            metrics.append(f"pain: {entry['pain_level']}/10")
+        if entry.get('sleep_hours'):
+            metrics.append(f"sleep: {entry['sleep_hours']}hrs")
+        if entry.get('stress_level'):
+            metrics.append(f"stress: {entry['stress_level']}/10")
+        
+        metrics_str = f" [{', '.join(metrics)}]" if metrics else ""
+        
+        formatted_context += f"\n{date}{metrics_str}:\n{text[:200]}{'...' if len(text) > 200 else ''}\n"
+    
+    return formatted_context
+
+
+def get_enhanced_fallback_data():
+    """Enhanced fallback data with all analysis structures"""
+    return {
+        "mood_score": None,
+        "energy_level": None,
+        "pain_level": None,
+        "sleep_quality": None,
+        "sleep_hours": None,
+        "stress_level": None,
+        "symptoms": [],
+        "activities": [],
+        "food_intake": [],
+        "social_interactions": None,
+        "triggers": [],
+        "medications": [],
+        "locations": [],
+        "confidence": 0.0,
+        "entry_categorization": {
+            "primary_themes": {},
+            "complexity_level": "basic",
+            "analysis_depth_needed": "basic"
+        },
+        "temporal_context_used": 0,
+        "temporal_analysis": {
+            "delayed_food_effects": [],
+            "cumulative_stress_effects": [],
+            "pattern_recognition": {
+                "repeated_food_symptom_pattern": "",
+                "behavioral_health_pattern": "",
+                "trigger_confidence_level": "low"
+            },
+            "recovery_indicators": []
+        }
+    }
+    
 
 @app.route('/api/entries', methods=['GET'])
 def get_entries():
@@ -292,7 +839,7 @@ def get_health_summary():
 def get_weekly_summary():
     """
     Generate comprehensive weekly health summary with AI insights
-    This is the main endpoint for your new analytics feature
+    FIXED: Proper data mapping for all AI insight fields
     """
     try:
         user_id = request.args.get('user_id', 1, type=int)
@@ -301,52 +848,57 @@ def get_weekly_summary():
         
         # Generate the complete analysis
         summary = analytics_engine.generate_weekly_summary(user_id)
+        print(f"🔍 Raw summary object: {summary}")
         
-        # Convert to JSON-serializable format
+        # FIXED: Corrected data mapping to match frontend expectations
         response_data = {
             "success": True,
-            "summary": {
-                "period": {
-                    "start_date": summary.period_start,
-                    "end_date": summary.period_end,
-                    "total_entries": summary.total_entries
+            "period": {
+                "start_date": summary.period_start,
+                "end_date": summary.period_end,
+                "total_entries": summary.total_entries
+            },
+            "health_metrics": {
+                "mood": {
+                    "average": summary.avg_mood,
+                    "trend": summary.mood_trend,
+                    "scale": "1-10 (higher is better)"
                 },
-                "health_metrics": {
-                    "mood": {
-                        "average": summary.avg_mood,
-                        "trend": summary.mood_trend,
-                        "scale": "1-10 (higher is better)"
-                    },
-                    "energy": {
-                        "average": summary.avg_energy,
-                        "trend": summary.energy_trend,
-                        "scale": "1-10 (higher is better)"
-                    },
-                    "pain": {
-                        "average": summary.avg_pain,
-                        "trend": summary.pain_trend,
-                        "scale": "0-10 (lower is better)"
-                    },
-                    "sleep": {
-                        "average_hours": summary.avg_sleep_hours,
-                        "scale": "hours per night"
-                    },
-                    "stress": {
-                        "average": summary.avg_stress,
-                        "scale": "0-10 (lower is better)"
-                    }
+                "energy": {
+                    "average": summary.avg_energy,
+                    "trend": summary.energy_trend,
+                    "scale": "1-10 (higher is better)"
                 },
-                "correlations": summary.correlations,
-                "insights": {
-                    "key_findings": summary.insights,
-                    "potential_triggers": summary.potential_triggers,
-                    "recommendations": summary.recommendations
+                "pain": {
+                    "average": summary.avg_pain,
+                    "trend": summary.pain_trend,
+                    "scale": "0-10 (lower is better)"
                 },
-                "generated_at": datetime.now().isoformat()
-            }
+                "sleep": {
+                    "average_hours": summary.avg_sleep_hours,
+                    "trend": "stable",  # Add trend for sleep if available
+                    "scale": "hours per night"
+                },
+                "stress": {
+                    "average": summary.avg_stress,
+                    "trend": "stable",  # Add trend for stress if available
+                    "scale": "0-10 (lower is better)"
+                }
+            },
+            "correlations": summary.correlations,
+            "insights": {
+                # FIXED: Correct field mapping
+                "key_insights": summary.insights,  # ✅ Was 'key_findings'
+                "potential_triggers": summary.potential_triggers,
+                "recommendations": summary.recommendations,
+                # MISSING: Need to add these fields to HealthSummary class
+                "areas_of_concern": getattr(summary, 'areas_of_concern', []),
+                "positive_patterns": getattr(summary, 'positive_patterns', [])
+            },
+            "generated_at": datetime.now().isoformat()
         }
         
-        print("✅ Weekly summary generated successfully")
+        print("✅ Weekly summary response data:", response_data)
         return jsonify(response_data)
         
     except Exception as e:
