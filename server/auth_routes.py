@@ -28,6 +28,8 @@ def register_auth_routes(app):
             password = data.get('password', '')
             family_name = data.get('familyName', '')
             
+            print(f"🔄 Registration attempt for email: {email}, family: {family_name}")
+            
             # Validation
             if not email or not password or not family_name:
                 return jsonify({"error": "All fields are required"}), 400
@@ -36,7 +38,7 @@ def register_auth_routes(app):
                 return jsonify({"error": "Password must be at least 6 characters"}), 400
             
             # Basic email validation
-            if '@' not in email or '.' not in email:
+            if '@' not in email or '.' not in email.split('@')[1]:
                 return jsonify({"error": "Please enter a valid email address"}), 400
             
             conn = get_db_connection()
@@ -55,28 +57,51 @@ def register_auth_routes(app):
             
             # Create family account
             cursor.execute("""
-                INSERT INTO families (family_name, email, password_hash)
-                VALUES (%s, %s, %s)
+                INSERT INTO families (family_name, email, password_hash, created_at)
+                VALUES (%s, %s, %s, NOW())
                 RETURNING id, family_name, email
             """, (family_name, email, password_hash))
             
             family = cursor.fetchone()
             family_id = family['id']
+            print(f"✅ Family created with ID: {family_id}")
             
-            # Create first family member profile (the person who registered)
+            # Create admin user for the family with unique username
+            # Generate unique username from email (before @ symbol)
+            base_username = email.split('@')[0].lower()
+            # Remove non-alphanumeric characters
+            base_username = ''.join(c for c in base_username if c.isalnum())
+            if not base_username:
+                base_username = "admin"
+            
+            # Make username unique by checking if it exists
+            username = base_username
+            counter = 1
+            while True:
+                cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
+                if not cursor.fetchone():
+                    break
+                username = f"{base_username}{counter}"
+                counter += 1
+            
+            print(f"🔄 Creating admin user with username: {username}")
+            
+            # Create first family member profile (admin)
             cursor.execute("""
-                INSERT INTO users (family_id, username, display_name, avatar, color, role)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                RETURNING id, display_name, avatar, color
-            """, (family_id, "parent", "Parent", "👨‍👩‍👧‍👦", "#2196f3", "admin"))
+                INSERT INTO users (family_id, username, display_name, avatar, color, role, last_active)
+                VALUES (%s, %s, %s, %s, %s, %s, NOW())
+                RETURNING id, username, display_name as name, avatar, color, role
+            """, (family_id, username, "Admin", "👑", "#6c5ce7", "admin"))
             
-            first_profile = cursor.fetchone()
+            admin_profile = cursor.fetchone()
+            print(f"✅ Admin profile created with ID: {admin_profile['id']}")
+            
             conn.commit()
             
-            # Create JWT token (this is what replaces sessions)
+            # Create JWT token
             token = create_access_token(identity=family_id)
             
-            return jsonify({
+            response_data = {
                 "success": True,
                 "token": token,
                 "user": {
@@ -84,11 +109,16 @@ def register_auth_routes(app):
                     "familyName": family['family_name'],
                     "email": family['email']
                 },
-                "message": "Family account created successfully!"
-            })
+                "message": f"Welcome to the {family_name} family health diary!"
+            }
+            
+            print(f"✅ Registration successful for family: {family_name}")
+            return jsonify(response_data)
             
         except Exception as e:
-            print(f"Registration error: {e}")
+            print(f"❌ Registration error: {e}")
+            import traceback
+            print(f"🔍 Full traceback: {traceback.format_exc()}")
             return jsonify({"error": "Registration failed. Please try again."}), 500
         finally:
             if 'conn' in locals():

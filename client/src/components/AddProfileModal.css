@@ -4,57 +4,69 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.6);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    padding: 20px;
+    backdrop-filter: blur(4px);
   }
   
   .modal-content {
     background: white;
-    border-radius: 15px;
-    width: 100%;
+    border-radius: 20px;
+    padding: 0;
     max-width: 500px;
+    width: 90%;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 20px 60px rgba(59, 130, 246, 0.3);
+    border: 1px solid rgba(59, 130, 246, 0.1);
   }
   
   .modal-header {
+    background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+    color: white;
+    padding: 24px 30px;
+    border-radius: 20px 20px 0 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 25px 0;
-    border-bottom: 1px solid #eee;
-    margin-bottom: 20px;
   }
   
   .modal-header h2 {
     margin: 0;
-    color: #333;
-    font-size: 1.4rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: white;
   }
   
   .close-button {
-    background: none;
+    background: rgba(255, 255, 255, 0.2);
     border: none;
+    color: white;
     font-size: 1.5rem;
-    cursor: pointer;
-    color: #666;
-    padding: 5px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: all 0.2s ease;
   }
   
   .close-button:hover {
-    background: #f5f5f5;
-    color: #333;
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
   }
   
+  /* ===================================== */
+  /* FORM STYLING */
+  /* ===================================== */
+  
   .profile-form {
-    padding: 0 25px 25px;
+    padding: 30px;
   }
   
   .form-group {
@@ -63,182 +75,170 @@
   
   .form-group label {
     display: block;
+    margin-bottom: 8px;
     font-weight: 600;
-    color: #333;
-    margin-bottom: 10px;
-    font-size: 0.9rem;
+    color: #374151;
+    font-size: 0.95rem;
   }
   
   .form-group input {
     width: 100%;
-    padding: 12px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
+    padding: 14px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
     font-size: 1rem;
-    transition: border-color 0.2s ease;
+    transition: all 0.3s ease;
+    background: white;
+    color: #1f2937; /* CRITICAL: Dark text for visibility */
     box-sizing: border-box;
   }
   
   .form-group input:focus {
     outline: none;
-    border-color: #2196f3;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: white;
+    color: #1f2937; /* CRITICAL: Keep dark text on focus */
+  }
+  
+  .form-group input::placeholder {
+    color: #9ca3af;
   }
   
   .form-group input:disabled {
-    background: #f5f5f5;
+    background: #f9fafb;
+    color: #6b7280;
     cursor: not-allowed;
   }
+  
+  /* ===================================== */
+  /* AVATAR SELECTION */
+  /* ===================================== */
   
   .avatar-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 10px;
+    margin-top: 10px;
   }
   
   .avatar-option {
-    background: #f8f9fa;
-    border: 2px solid #e0e0e0;
-    border-radius: 10px;
-    padding: 15px;
+    background: #f8fafc;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 12px;
     font-size: 1.5rem;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     aspect-ratio: 1;
     display: flex;
     align-items: center;
     justify-content: center;
   }
   
-  .avatar-option:hover:not(:disabled) {
-    border-color: #2196f3;
+  .avatar-option:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
     transform: scale(1.05);
   }
   
   .avatar-option.selected {
-    border-color: #2196f3;
-    background: #e3f2fd;
+    border-color: #3b82f6;
+    background: #3b82f6;
+    color: white;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
   }
   
   .avatar-option:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
   }
+  
+  /* ===================================== */
+  /* COLOR SELECTION */
+  /* ===================================== */
   
   .color-grid {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
     gap: 10px;
+    margin-top: 10px;
   }
   
   .color-option {
-    width: 40px;
-    height: 40px;
     border: 3px solid transparent;
     border-radius: 50%;
+    width: 40px;
+    height: 40px;
     cursor: pointer;
-    transition: all 0.2s ease;
-    margin: 0 auto;
+    transition: all 0.3s ease;
+    position: relative;
   }
   
-  .color-option:hover:not(:disabled) {
+  .color-option:hover {
     transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border-color: #374151;
   }
   
   .color-option.selected {
-    border-color: #333;
-    transform: scale(1.1);
+    border-color: #1f2937;
+    transform: scale(1.15);
+    box-shadow: 0 0 0 2px white, 0 0 0 4px #1f2937;
   }
   
   .color-option:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
   }
   
-  .profile-preview {
-    background: #f8f9fa;
-    border-radius: 10px;
-    padding: 20px;
-    text-align: center;
-    margin-bottom: 20px;
-  }
-  
-  .preview-label {
-    font-weight: 600;
-    color: #666;
-    margin-bottom: 15px;
-    font-size: 0.9rem;
-  }
-  
-  .preview-profile {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-  }
-  
-  .preview-avatar {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.8rem;
-    color: white;
-  }
-  
-  .preview-name {
-    font-weight: 600;
-    color: #333;
-    font-size: 1rem;
-  }
-  
-  .error-message {
-    background: #ffebee;
-    border: 1px solid #f44336;
-    border-radius: 8px;
-    padding: 12px;
-    color: #c62828;
-    font-size: 0.9rem;
-    margin-bottom: 20px;
-    text-align: center;
-  }
+  /* ===================================== */
+  /* MODAL ACTIONS */
+  /* ===================================== */
   
   .modal-actions {
     display: flex;
-    gap: 15px;
+    gap: 12px;
     justify-content: flex-end;
-  }
-  
-  .cancel-button,
-  .create-button {
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: none;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
   }
   
   .cancel-button {
-    background: #f5f5f5;
-    color: #666;
+    background: #f9fafb;
+    color: #6b7280;
+    border: 2px solid #e5e7eb;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
   }
   
   .cancel-button:hover:not(:disabled) {
-    background: #e0e0e0;
+    background: #f3f4f6;
+    border-color: #d1d5db;
+    color: #374151;
   }
   
   .create-button {
-    background: #4caf50;
+    background: #3b82f6;
     color: white;
+    border: 2px solid #3b82f6;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
   }
   
   .create-button:hover:not(:disabled) {
-    background: #45a049;
+    background: #2563eb;
+    border-color: #2563eb;
     transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
   }
   
   .create-button:disabled,
@@ -248,11 +248,37 @@
     transform: none;
   }
   
-  /* Responsive */
+  /* ===================================== */
+  /* ERROR HANDLING */
+  /* ===================================== */
+  
+  .error-message {
+    background: #fef2f2;
+    color: #dc2626;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #fecaca;
+    font-size: 0.9rem;
+  }
+  
+  /* ===================================== */
+  /* RESPONSIVE DESIGN */
+  /* ===================================== */
+  
   @media (max-width: 480px) {
     .modal-content {
-      margin: 10px;
-      max-height: 95vh;
+      margin: 20px;
+      width: calc(100% - 40px);
+      max-height: calc(100vh - 40px);
+    }
+    
+    .modal-header {
+      padding: 20px 24px;
+    }
+    
+    .profile-form {
+      padding: 24px;
     }
     
     .avatar-grid {
@@ -266,14 +292,21 @@
     .modal-actions {
       flex-direction: column;
     }
+  
+    .cancel-button,
+    .create-button {
+      width: 100%;
+      padding: 14px;
+    }
   }
   
   /* ===================================== */
-  /* client/src/components/ProfileSelector.css */
+  /* PROFILE SELECTOR STYLES */
+  /* ===================================== */
   
   .profile-container {
     min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -284,12 +317,13 @@
   .profile-card {
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(20px);
-    border-radius: 20px;
+    border-radius: 24px;
     padding: 40px;
     max-width: 900px;
     width: 100%;
     border: 1px solid rgba(255, 255, 255, 0.2);
     text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   }
   
   .profile-header {
@@ -301,7 +335,7 @@
     color: white;
     font-size: 2.5rem;
     margin-bottom: 10px;
-    font-weight: 700;
+    font-weight: 800;
   }
   
   .profile-header p {
@@ -317,96 +351,95 @@
     background: rgba(255, 255, 255, 0.2);
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.3);
-    padding: 8px 16px;
-    border-radius: 20px;
+    padding: 10px 18px;
+    border-radius: 25px;
     font-size: 0.9rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
   }
   
   .logout-button:hover {
     background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
   }
   
   .profiles-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 24px;
   }
   
   .profile-item {
     background: rgba(255, 255, 255, 0.15);
-    border-radius: 15px;
-    padding: 25px;
+    border-radius: 20px;
+    padding: 30px;
     cursor: pointer;
     transition: all 0.3s ease;
     border: 2px solid transparent;
     text-align: center;
+    backdrop-filter: blur(10px);
   }
   
   .profile-item:hover {
-    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+  
+  .profile-item.add-profile {
+    border: 2px dashed rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  .profile-item.add-profile:hover {
     background: rgba(255, 255, 255, 0.2);
-    border-color: var(--profile-color, #2196f3);
+    border-style: solid;
   }
   
   .profile-avatar {
-    font-size: 4rem;
+    font-size: 3rem;
     margin-bottom: 15px;
-    background: var(--profile-color, #2196f3);
-    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
     width: 80px;
     height: 80px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 15px;
-    color: white;
+    margin: 0 auto 15px auto;
   }
   
   .add-avatar {
-    background: rgba(255, 255, 255, 0.3) !important;
-    color: rgba(255, 255, 255, 0.8) !important;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px dashed rgba(255, 255, 255, 0.5);
   }
   
   .profile-name {
     color: white;
     font-size: 1.3rem;
-    margin-bottom: 10px;
-    font-weight: 600;
+    font-weight: 700;
+    margin-bottom: 15px;
   }
   
   .profile-stats {
     display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-bottom: 10px;
+    justify-content: space-around;
+    margin-bottom: 15px;
   }
   
   .stat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    text-align: center;
   }
   
-  .stat-number {
-    color: white;
-    font-size: 1.2rem;
-    font-weight: 700;
-  }
   
-  .stat-label {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.8rem;
-  }
+  
+ 
   
   .last-active {
     color: rgba(255, 255, 255, 0.6);
     font-size: 0.8rem;
-  }
-  
-  .add-profile {
-    border: 2px dashed rgba(255, 255, 255, 0.4) !important;
   }
   
   .add-description {
@@ -415,6 +448,7 @@
     margin: 0;
   }
   
+  /* Loading and Error States */
   .loading-message,
   .error-message {
     color: white;
@@ -427,37 +461,132 @@
     background: rgba(255, 255, 255, 0.2);
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.3);
-    padding: 10px 20px;
-    border-radius: 20px;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-weight: 600;
     cursor: pointer;
     margin-top: 20px;
+    transition: all 0.3s ease;
   }
   
   .retry-button:hover {
     background: rgba(255, 255, 255, 0.3);
   }
+
+  .form-group input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: white; /* Ensure white background */
+    color: #1f2937 !important; /* FORCE dark text color */
+    box-sizing: border-box;
+  }
   
-  /* Responsive */
-  @media (max-width: 768px) {
-    .profile-container {
-      padding: 15px;
-    }
-    
-    .profile-card {
-      padding: 30px 20px;
-    }
-    
-    .profile-header h1 {
-      font-size: 2rem;
-    }
-    
-    .profiles-grid {
-      grid-template-columns: 1fr;
-      gap: 15px;
-    }
-    
-    .logout-button {
-      position: static;
-      margin-top: 10px;
-    }
+  .form-group input:focus {
+    outline: none;
+    border-color: #325eb5; /* Use your blue color */
+    box-shadow: 0 0 0 3px rgba(50, 94, 181, 0.1);
+    background: white !important; /* Force white background on focus */
+    color: #1f2937 !important; /* Force dark text on focus */
+  }
+  
+  .form-group input::placeholder {
+    color: #9ca3af !important; /* Light gray placeholder */
+  }
+  
+  .form-group input:disabled {
+    background: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+  }
+  
+  /* ===================================== */
+  /* MODAL HEADER - MATCHING YOUR BLUE THEME */
+  /* ===================================== */
+  
+  .modal-header {
+    background: linear-gradient(135deg, #325eb5 0%, #4aa7dc 100%); /* Match your theme */
+    color: white;
+    padding: 24px 30px;
+    border-radius: 20px 20px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: white;
+  }
+  
+  /* ===================================== */
+  /* AVATAR SELECTION - MATCHING YOUR THEME */
+  /* ===================================== */
+  
+  .avatar-option {
+    background: #f8fafc;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .avatar-option:hover {
+    border-color: #325eb5; /* Your blue color */
+    background: #eff6ff;
+    transform: scale(1.05);
+  }
+  
+  .avatar-option.selected {
+    border-color: #325eb5;
+    background: #325eb5; /* Your blue color */
+    color: white;
+    box-shadow: 0 4px 12px rgba(50, 94, 181, 0.3);
+  }
+  
+  /* ===================================== */
+  /* CREATE BUTTON - MATCHING YOUR THEME */
+  /* ===================================== */
+  
+  .create-button {
+    background: #325eb5; /* Your blue color */
+    color: white;
+    border: 2px solid #325eb5;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .create-button:hover:not(:disabled) {
+    background: #2a4d96; /* Darker blue for hover */
+    border-color: #2a4d96;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(50, 94, 181, 0.3);
+  }
+  
+  /* ===================================== */
+  /* PROFILE SELECTOR - MATCHING YOUR BLUE THEME */
+  /* ===================================== */
+  
+  .profile-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #325eb5 0%, #4aa7dc 100%); /* Match your HeroSection */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    font-family: system-ui, -apple-system, sans-serif;
   }

@@ -3,11 +3,23 @@
 const BASE_URL = 'http://localhost:5001/api';
 
 class ApiService {
-
-  setAuthToken(token) {
-    this.authToken = token;
+  constructor() {
+    this.authToken = null;
+    
+    // Listen for auth events from AuthContext
+    window.addEventListener('auth-expired', () => {
+      this.authToken = null;
+      console.log('🔓 Auth token cleared due to expiration');
+    });
   }
 
+  // Set the auth token (called by AuthContext when user logs in)
+  setAuthToken(token) {
+    this.authToken = token;
+    console.log('🔑 Auth token set in ApiService');
+  }
+
+  // Get headers for authenticated requests
   getAuthHeaders() {
     const headers = {
       'Content-Type': 'application/json'
@@ -20,12 +32,12 @@ class ApiService {
     return headers;
   }
 
-  
   // Helper method to handle HTTP responses
   async handleResponse(response) {
     if (!response.ok) {
       if (response.status === 401) {
         // Token expired - trigger logout
+        this.authToken = null;
         window.dispatchEvent(new CustomEvent('auth-expired'));
         throw new Error('Session expired. Please log in again.');
       }
@@ -52,10 +64,11 @@ class ApiService {
       if (!selectedProfile) {
         throw new Error('No profile selected');
       }
+      
       const requestBody = {
         text: diaryText,
         user_id: selectedProfile.id,
-        date: entryDate || new Date().toLocaleDateString()
+        date: entryDate || new Date().toISOString().split('T')[0] // Use ISO date format
       };
 
       console.log('📤 Sending entry to backend:', requestBody);
@@ -84,7 +97,6 @@ class ApiService {
       }
 
       const params = new URLSearchParams();
-
       params.append('user_id', selectedProfile.id);
       
       if (options.startDate) params.append('start_date', options.startDate);
@@ -98,8 +110,8 @@ class ApiService {
       const response = await fetch(url, {
         headers: this.getAuthHeaders()
       });
-      const result = await this.handleResponse(response);
       
+      const result = await this.handleResponse(response);
       console.log(`✅ Fetched ${result.entries.length} entries`);
       return result;
       
@@ -122,10 +134,9 @@ class ApiService {
 
       const response = await fetch(`${BASE_URL}/analytics/summary?${params.toString()}`, {
         headers: this.getAuthHeaders()
-      }
-      );
-      const result = await this.handleResponse(response);
+      });
       
+      const result = await this.handleResponse(response);
       console.log('📊 Health summary fetched:', result);
       return result;
       
@@ -136,9 +147,13 @@ class ApiService {
   }
 
   // Get entries for a specific date (for calendar)
-  async getEntriesForDate(date) {
+  async getEntriesForDate(selectedProfile, date) {
     try {
-      const result = await this.getEntries({
+      if (!selectedProfile) {
+        throw new Error('No profile selected');
+      }
+
+      const result = await this.getEntries(selectedProfile, {
         startDate: date,
         endDate: date
       });
@@ -264,48 +279,46 @@ class ApiService {
     return symptoms;
   }
 
-    // Delete a specific entry
-    async deleteEntry(entryId) {
-        try {
-        console.log(`🗑️ Deleting entry ${entryId}...`);
-        
-        const response = await fetch(`${BASE_URL}/entries/${entryId}`, {
-            method: 'DELETE',
-            headers: this.getAuthHeaders()
-        });
-    
-        const result = await this.handleResponse(response);
-        console.log('✅ Entry deleted successfully:', result);
-        return result;
-        
-        } catch (error) {
-        console.error('❌ Failed to delete entry:', error);
-        throw error;
-        }
-    }
+  // Delete a specific entry
+  async deleteEntry(entryId) {
+    try {
+      console.log(`🗑️ Deleting entry ${entryId}...`);
+      
+      const response = await fetch(`${BASE_URL}/entries/${entryId}`, {
+        method: 'DELETE',
+        headers: this.getAuthHeaders()
+      });
 
-    // Clear ALL entries (use with extreme caution!)
-    async clearAllEntries() {
-        try {
-        console.log('🚨 Clearing ALL entries...');
-        
-        const response = await fetch(`${BASE_URL}/entries/clear-all`, {
-            method: 'DELETE',
-            headers: {
-            'Content-Type': 'application/json',
-            }
-        });
-    
-        const result = await this.handleResponse(response);
-        console.log('✅ All entries cleared successfully:', result);
-        return result;
-        
-        } catch (error) {
-        console.error('❌ Failed to clear all entries:', error);
-        throw error;
-        }
+      const result = await this.handleResponse(response);
+      console.log('✅ Entry deleted successfully:', result);
+      return result;
+      
+    } catch (error) {
+      console.error('❌ Failed to delete entry:', error);
+      throw error;
     }
-  
+  }
+
+  // Clear ALL entries (use with extreme caution!)
+  async clearAllEntries() {
+    try {
+      console.log('🚨 Clearing ALL entries...');
+      
+      const response = await fetch(`${BASE_URL}/entries/clear-all`, {
+        method: 'DELETE',
+        headers: this.getAuthHeaders()
+      });
+
+      const result = await this.handleResponse(response);
+      console.log('✅ All entries cleared successfully:', result);
+      return result;
+      
+    } catch (error) {
+      console.error('❌ Failed to clear all entries:', error);
+      throw error;
+    }
+  }
+
   // Delete multiple entries at once
   async bulkDeleteEntries(entryIds) {
     try {
@@ -318,7 +331,7 @@ class ApiService {
         },
         body: JSON.stringify({ entry_ids: entryIds })
       });
-  
+
       const result = await this.handleResponse(response);
       console.log('✅ Bulk delete successful:', result);
       return result;
@@ -328,12 +341,11 @@ class ApiService {
       throw error;
     }
   }
-  
+
   // Check if an entry is a demo entry (starts with 'demo_')
   isDemoEntry(entryId) {
     return String(entryId).startsWith('demo_');
   }
-
 }
 
 // Export a singleton instance

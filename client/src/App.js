@@ -14,23 +14,42 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AuthForm from './components/AuthForm';
 import ProfileSelector from './components/ProfileSelector';
 
+// Main App component wrapped in AuthProvider
 function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
 
-  const { user, selectedProfile, authenticatedFetch } = useAuth();
+// Inner app content that uses authentication
+function AppContent() {
+  const { user, selectedProfile, getAuthToken, loading } = useAuth();
 
   const [diaryText, setDiaryText] = useState(''); //what the user types
   const [diaryEntries, setDiaryEntries] = useState([]); //all the diary entries
-  const [currentView, setCurrentView] = useState('list'); //track which view we are in: list or calendar
+  const [currentView, setCurrentView] = useState('home'); //track which view we are in: home, list, calendar, charts, analytics, dev-tools
   const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString()); //track which date we are looking at
   const [lastEntryTimestamp, setLastEntryTimestamp] = useState(Date.now());
 
-  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [backendStatus, setBackendStatus] = useState('checking'); // 'checking', 'connected', 'disconnected'
 
+  // Sync auth token with apiService whenever user changes
+  useEffect(() => {
+    const token = getAuthToken();
+    if (token) {
+      apiService.setAuthToken(token);
+      console.log('🔑 Auth token synced with apiService');
+    } else {
+      apiService.setAuthToken(null);
+      console.log('🔓 Auth token cleared from apiService');
+    }
+  }, [user, getAuthToken]);
 
-  
+  // Check backend connection
   useEffect(() => {
     const checkBackendConnection = async () => {
       try {
@@ -47,28 +66,33 @@ function App() {
     checkBackendConnection();
   }, []);
 
-  // Load existing entries when app starts
+  // Load existing entries when a profile is selected
   useEffect(() => {
-    if (backendStatus === 'connected') {
+    if (backendStatus === 'connected' && selectedProfile) {
       loadEntries();
     }
-  }, [backendStatus]);
+  }, [backendStatus, selectedProfile]);
 
   // Function to load entries from backend
   const loadEntries = async () => {
+    if (!selectedProfile) {
+      console.log('⏸️ No profile selected, skipping entry load');
+      return;
+    }
+
     try {
       setIsLoading(true);
-      const response = await authenticatedFetch(`http://localhost:5001/api/entries?user_id=${selectedProfile.id}`);
-      
       setError(null);
       
-      const result = await apiService.getEntries({ limit: 50 });
+      console.log('📥 Loading entries for profile:', selectedProfile.name);
+      
+      const result = await apiService.getEntries(selectedProfile, { limit: 50 });
       
       // Convert backend format to your current React format
       const convertedEntries = result.entries.map(entry => apiService.convertBackendEntry(entry));
       
       setDiaryEntries(convertedEntries);
-      console.log(`📥 Loaded ${convertedEntries.length} entries from backend`);
+      console.log(`✅ Loaded ${convertedEntries.length} entries from backend`);
       
     } catch (error) {
       console.error('Failed to load entries:', error);
@@ -78,14 +102,15 @@ function App() {
     }
   };
 
-
-
-
-//creating an entry object and adding it to diaryEntries array
-  
+  // Creating an entry object and adding it to diaryEntries array
   const handleSaveEntry = async () => {
     if (diaryText.trim() === '') {
       alert("Please write something first!");
+      return;
+    }
+
+    if (!selectedProfile) {
+      alert("Please select a profile first!");
       return;
     }
 
@@ -93,8 +118,10 @@ function App() {
       setIsLoading(true);
       setError(null);
 
+      console.log('💾 Saving entry for profile:', selectedProfile.name);
+
       // Send to backend (with AI processing)
-      const result = await apiService.createEntry(diaryText, new Date().toISOString().split('T')[0]);
+      const result = await apiService.createEntry(diaryText, selectedProfile, new Date().toISOString().split('T')[0]);
       
       // Create a backend-style entry object
       const backendStyleEntry = {
@@ -117,8 +144,6 @@ function App() {
       // Add to the top of the list (newest first)
       setDiaryEntries([newEntry, ...diaryEntries]);
       setDiaryText('');
-      
-      
       setLastEntryTimestamp(Date.now());
       
       alert(`Entry Saved! AI Confidence: ${Math.round((newEntry.aiConfidence || 0) * 100)}%`);
@@ -132,8 +157,13 @@ function App() {
     }
   };
 
-//deleting entries
+  // Deleting entries
   const handleDeleteEntry = async (entryId) => {
+    if (!selectedProfile) {
+      alert("No profile selected!");
+      return;
+    }
+
     try {
       setIsLoading(true);
       
@@ -157,7 +187,7 @@ function App() {
     }
   };
 
-
+  // Handle data import (for demo data, etc.)
   const handleDataImport = (newEntries, action = 'add') => {
     if (action === 'replace') {
       // Replace all entries (used by clear functions)
@@ -172,11 +202,11 @@ function App() {
       // Add new entries
       setDiaryEntries([...diaryEntries, ...newEntries]);
       console.log(`📊 Added ${newEntries.length} new entries`);
-      // 🔥 NEW: Update timestamp when adding entries
       setLastEntryTimestamp(Date.now());
     }
   };
 
+  // Get entries for a specific date (used by Calendar component)
   const getEntriesForDate = (date) => {
     console.log('🔍 getEntriesForDate called with:', date);
     console.log('📊 Current diaryEntries array:', diaryEntries);
@@ -190,7 +220,7 @@ function App() {
     return filteredEntries;
   };
   
-  // Get unique dates that have entries
+  // Get unique dates that have entries (used by Calendar component)
   const getDatesWithEntries = () => {
     console.log('🔍 getDatesWithEntries called');
     console.log('📊 Current diaryEntries array:', diaryEntries);
@@ -217,239 +247,236 @@ function App() {
         </div>
       );
     }
-    return <div className="status-message connected">✅ Connected to backend</div>;
+    return null; // Connected status is shown in profile bar
   };
 
-  
+  // Show loading screen while checking auth
+  if (loading) {
+    return (
+      <div className="App">
+        <div className="auth-loading">
+          <div className="auth-loading-icon">🏠</div>
+          <div className="auth-loading-text">Loading Family Health Diary...</div>
+        </div>
+      </div>
+    );
+  }
 
-  
+  // Show auth form if user not logged in
+  if (!user) {
+    return (
+      <div className="App">
+        <AuthForm />
+      </div>
+    );
+  }
 
+  // Show profile selector if no profile selected
+  if (!selectedProfile) {
+    return (
+      <div className="App">
+        <ProfileSelector />
+      </div>
+    );
+  }
+
+  // Main app content for authenticated users with selected profile
   return (
     <div className="App">
-
-      {currentView === 'home' && (
-        <div className="home-page">
-          {/* Your existing Hero Section */}
-          <HeroSection setCurrentView={setCurrentView} />
-          
-          {/* NEW: Feature Showcase Section */}
-          <div className="feature-showcase-section">
-            <div className="feature-showcase-container">
-              <h2 className="feature-showcase-title">🎯 Powerful Health Intelligence Features</h2>
-              
-              <p className="feature-showcase-subtitle">
-                Experience the future of personal health tracking with AI-powered insights
-              </p>
-
-              {/* Feature cards */}
-              <div className="feature-cards-grid">
-                {[
-                  {
-                    icon: '🤖',
-                    title: 'AI Health Analysis',
-                    description: 'GPT-4 powered extraction of health metrics from natural language diary entries',
-                    action: 'list'
-                  },
-                  {
-                    icon: '📊',
-                    title: 'Data Visualization',
-                    description: 'Interactive charts showing trends, correlations, and patterns in your health data',
-                    action: 'charts'
-                  },
-                  {
-                    icon: '🧬',
-                    title: 'Pattern Detection',
-                    description: 'Statistical analysis reveals hidden connections between sleep, pain, mood, and stress',
-                    action: 'analytics'
-                  },
-                  {
-                    icon: '🎤',
-                    title: 'Voice Interface',
-                    description: 'Speak naturally about your day - AI converts speech to structured health insights',
-                    action: 'list'
-                  },
-                  {
-                    icon: '📅',
-                    title: 'Smart Calendar',
-                    description: 'Visual calendar view with color-coded health indicators and pattern recognition',
-                    action: 'calendar'
-                  },
-                  {
-                    icon: '💡',
-                    title: 'Personalized Insights',
-                    description: 'Weekly AI-generated recommendations based on your unique health patterns',
-                    action: 'analytics'
-                  }
-                ].map((feature, index) => (
-                  <div
-                    key={index}
-                    className="feature-card"
-                    onClick={() => setCurrentView(feature.action)}
-                  >
-                    <div className="feature-card-icon">{feature.icon}</div>
-                    <h3 className="feature-card-title">{feature.title}</h3>
-                    <p className="feature-card-description">{feature.description}</p>
-                    <div className="feature-card-cta">Click to explore →</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Call to action */}
-              <div className="feature-showcase-cta">
-                <h3 className="cta-title">Ready to Transform Your Health Journey?</h3>
-                <p className="cta-subtitle">Start tracking your health with AI-powered insights today</p>
-                <button 
-                  className="cta-button"
-                  onClick={() => setCurrentView('list')}
-                >
-                  🚀 Get Started Now
-                </button>
-              </div>
+      {/* Profile info bar */}
+      <div className="profile-info-bar">
+        <div className="profile-info-left">
+          <span className="profile-avatar">{selectedProfile.avatar || '👤'}</span>
+          <div className="profile-details">
+            <div className="profile-name">
+              {selectedProfile.name}'s Health Diary
             </div>
+            <div className="profile-family">
+              {user.familyName} Family • {diaryEntries.length} entries
+            </div>
+          </div>
+        </div>
+        <div className="profile-info-right">
+          <div className={`connection-status ${backendStatus}`}>
+            {backendStatus === 'connected' ? '🟢 Connected' : '🔴 Offline'}
+          </div>
+        </div>
+      </div>
+
+      {/* Hero/Home Section */}
+      {currentView === 'home' && (
+        <div className="hero-section">
+          <HeroSection 
+            currentView={currentView} 
+            setCurrentView={setCurrentView}
+            totalEntries={diaryEntries.length}
+            selectedProfile={selectedProfile}
+          />
+          
+          {/* Call to Action */}
+          <div className="feature-showcase-cta">
+            <h3 className="cta-title">Ready to Transform Your Health Journey?</h3>
+            <p className="cta-subtitle">Start tracking your health with AI-powered insights today</p>
+            <button 
+              className="cta-button"
+              onClick={() => setCurrentView('list')}
+            >
+              🚀 Get Started Now
+            </button>
           </div>
         </div>
       )}
 
+      {/* Main content for other views */}
       {currentView !== 'home' && (
         <>
           <h1>My Health Diary App</h1>
           <p>Welcome to your personal AI-powered health tracker!</p>
-        
 
-      {/* Connection Status */}
-      {renderConnectionStatus()}
+          {/* Connection Status */}
+          {renderConnectionStatus()}
 
-      {/* Error Display */}
-      {error && (
-        <div className="error-message">
-          ❌ {error}
-          <button onClick={() => setError(null)}>✕</button>
-        </div>
-      )}
-
-      {/* Input Section for Entries*/}
-      {currentView !== 'analytics' && currentView !== 'home' && currentView !== 'dev-tools' && (
-        <InputSection
-          diaryText={diaryText}
-          onTextChange={setDiaryText}
-          onSaveEntry={handleSaveEntry}
-          isLoading={isLoading}
-          disabled={backendStatus !== 'connected'}
-        />
-      )}
-
-      {/* Loading Indicator */}
-      {isLoading && (
-        <div className="loading-message">
-          🔄 Processing your entry with AI...
-        </div>
-      )}
-
-      {/* View toggle buttons */}
-      <div className="view-toggle">
-        <button 
-          className={currentView === 'home' ? 'view-btn active' : 'view-btn'}
-          onClick={() => setCurrentView('home')}
-        >🏠 Home</button>
-        <button 
-          className={currentView === 'list' ? 'view-btn active' : 'view-btn'}
-          onClick={() => setCurrentView('list')}
-        >📋 List View</button>
-        <button
-          className={currentView === 'calendar' ? 'view-btn active' : 'view-btn'}
-          onClick={() => setCurrentView('calendar')}
-        >📅 Calendar View</button>
-        <button
-          className={currentView === 'charts' ? 'view-btn active' : 'view-btn'}
-          onClick={() => setCurrentView('charts')}
-        >📊 Data Visualization</button>
-        <button
-          className={currentView === 'analytics' ? 'view-btn active' : 'view-btn'}
-          onClick={() => setCurrentView('analytics')}
-        >🧠 AI Insights</button>
-        <button
-        className={currentView === 'dev-tools' ? 'view-btn active' : 'view-btn'}
-        onClick={() => setCurrentView('dev-tools')}
-        >🛠️ Dev Tools</button>
-      </div>
-
-      {/* Charts View */}
-      {currentView === 'charts' && (
-        <>
-          
-
-          {/* NEW: Health Charts */}
-          {diaryEntries.length > 0 && (
-            <HealthCharts entries={diaryEntries} />
+          {/* Error Display */}
+          {error && (
+            <div className="error-banner">
+              ⚠️ {error}
+              <button onClick={() => setError(null)} className="error-close">✕</button>
+            </div>
           )}
-        </>
-        
-      )}
 
-      {/* Analytics View */}
-      {currentView === 'analytics' && (
-        <WeeklyInsights lastEntryTimestamp={lastEntryTimestamp} />
-      )}
-
-      {/* Show saved entries for list and calendar views */}
-      {currentView !== 'analytics' && currentView !== 'charts' && currentView !== 'dev-tools' && diaryEntries.length > 0 && (
-        <>
-          {/*Quick Summary */}
-          <Summary 
-            Entries={diaryEntries}
-          />
-
-          {/* Calendar View Content*/}
-          {currentView === 'calendar' && (
-            <Calendar 
-              getDatesWithEntries={getDatesWithEntries}
-              getEntriesForDate={getEntriesForDate}
-              selectedDate={selectedDate}
-              setSelectedDate={setSelectedDate}
-              handleDeleteEntry={handleDeleteEntry}
+          {/* Input Section for Entries */}
+          {currentView !== 'analytics' && currentView !== 'home' && currentView !== 'dev-tools' && (
+            <InputSection
+              diaryText={diaryText}
+              onTextChange={setDiaryText}
+              onSaveEntry={handleSaveEntry}
+              isLoading={isLoading}
+              disabled={backendStatus !== 'connected'}
             />
           )}
 
-          {/*List View Content*/}
-          {currentView === 'list' && (
-            <>
-            
-            
-
-            <div className="entries-section">
-              <h3>Your Recent Entries ({diaryEntries.length} total)</h3>
-              {diaryEntries.map((entry) => (
-                <DiaryEntry 
-                  key={entry.id}
-                  entry={entry}
-                  deleteEntry={handleDeleteEntry}
-                />
-              ))}
+          {/* Loading Indicator */}
+          {isLoading && (
+            <div className="loading-message">
+              🔄 Processing your entry with AI...
             </div>
+          )}
+
+          {/* View toggle buttons */}
+          <div className="view-toggle">
+            <button 
+              className={currentView === 'home' ? 'view-btn active' : 'view-btn'}
+              onClick={() => setCurrentView('home')}
+            >🏠 Home</button>
+            <button 
+              className={currentView === 'list' ? 'view-btn active' : 'view-btn'}
+              onClick={() => setCurrentView('list')}
+            >📋 List View</button>
+            <button
+              className={currentView === 'calendar' ? 'view-btn active' : 'view-btn'}
+              onClick={() => setCurrentView('calendar')}
+            >📅 Calendar View</button>
+            <button
+              className={currentView === 'charts' ? 'view-btn active' : 'view-btn'}
+              onClick={() => setCurrentView('charts')}
+            >📊 Data Visualization</button>
+            <button
+              className={currentView === 'analytics' ? 'view-btn active' : 'view-btn'}
+              onClick={() => setCurrentView('analytics')}
+            >🧠 AI Insights</button>
+            <button
+              className={currentView === 'dev-tools' ? 'view-btn active' : 'view-btn'}
+              onClick={() => setCurrentView('dev-tools')}
+            >🛠️ Dev Tools</button>
+          </div>
+
+          {/* Charts View */}
+          {currentView === 'charts' && (
+            <>
+              {diaryEntries.length > 0 && (
+                <HealthCharts 
+                  entries={diaryEntries}
+                  selectedProfile={selectedProfile}
+                />
+              )}
+              {diaryEntries.length === 0 && (
+                <div className="no-entries-message">
+                  📊 No data to visualize yet. Add some diary entries first!
+                </div>
+              )}
             </>
+          )}
+
+          {/* Analytics View */}
+          {currentView === 'analytics' && (
+            <WeeklyInsights 
+              lastEntryTimestamp={lastEntryTimestamp}
+              entries={diaryEntries}
+              selectedProfile={selectedProfile}
+            />
+          )}
+
+          {/* Show saved entries for list and calendar views */}
+          {currentView !== 'analytics' && currentView !== 'charts' && currentView !== 'dev-tools' && diaryEntries.length > 0 && (
+            <>
+              {/* Quick Summary */}
+              <Summary 
+                Entries={diaryEntries}
+                selectedProfile={selectedProfile}
+                lastEntryTimestamp={lastEntryTimestamp}
+              />
+
+              {/* Calendar View Content */}
+              {currentView === 'calendar' && (
+                <Calendar 
+                  getDatesWithEntries={getDatesWithEntries}
+                  getEntriesForDate={getEntriesForDate}
+                  selectedDate={selectedDate}
+                  setSelectedDate={setSelectedDate}
+                  handleDeleteEntry={handleDeleteEntry}
+                  selectedProfile={selectedProfile}
+                />
+              )}
+
+              {/* List View Content */}
+              {currentView === 'list' && (
+                <div className="entries-section">
+                  <h3>Your Recent Entries ({diaryEntries.length} total)</h3>
+                  {diaryEntries.map((entry) => (
+                    <DiaryEntry 
+                      key={entry.id}
+                      entry={entry}
+                      deleteEntry={handleDeleteEntry}
+                      onDelete={handleDeleteEntry}
+                      isLoading={isLoading}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Developer Tools View */}
+          {currentView === 'dev-tools' && (
+            <DeveloperTools
+              onImportData={handleDataImport}
+              currentEntries={diaryEntries.length}
+              allEntries={diaryEntries}
+              onDataImported={loadEntries}
+              selectedProfile={selectedProfile}
+            />
+          )}
+
+          {/* Empty state when no entries and not loading and not in analytics view */}
+          {diaryEntries.length === 0 && !isLoading && backendStatus === 'connected' && 
+           currentView !== 'analytics' && currentView !== 'charts' && currentView !== 'dev-tools' && (
+            <div className="no-entries-message">
+              📝 No entries yet for {selectedProfile.name}. Start writing your first health diary entry above!
+            </div>
           )}
         </>
       )}
-
-      {currentView === 'dev-tools' && (
-        <DeveloperTools
-          onImportData={handleDataImport}
-          currentEntries={diaryEntries.length}
-          allEntries={diaryEntries}
-          onDataImported={loadEntries}
-        />
-      )}
-
-      {/* Empty state when no entries and not loading and not in analytics view */}
-      {diaryEntries.length === 0 && !isLoading && backendStatus === 'connected' && currentView !== 'analytics' && currentView !== 'charts' && currentView !== 'dev-tools' && (
-          <div className="empty-state">
-            <h3>No diary entries yet</h3>
-            <p>Start by writing your first entry above!</p>
-          </div>
-        )}
-      </>
-      )}
-      </div>
+    </div>
   );
 }
 

@@ -29,12 +29,40 @@ CORS(app, origins=["http://localhost:3000"])  # Allow React frontend to connect
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://username:password@localhost/health_app')
 
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)  # Tokens last 7 days
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
+app.config['JWT_ALGORITHM'] = 'HS256'
+
 jwt = JWTManager(app)
+
+# JWT error handlers
+@jwt.expired_token_loader
+def expired_token_callback(jwt_header, jwt_payload):
+    return jsonify({'error': 'Token has expired'}), 401
+
+@jwt.invalid_token_loader
+def invalid_token_callback(error):
+    print(f"❌ Invalid token error: {error}")
+    return jsonify({'error': 'Invalid token'}), 422
+
+@jwt.unauthorized_loader
+def missing_token_callback(error):
+    print(f"❌ Missing token error: {error}")
+    return jsonify({'error': 'Authorization token is required'}), 401
 
 
 register_auth_routes(app)
 register_family_routes(app)
+
+@app.route('/api/test-auth', methods=['GET'])
+@jwt_required()
+def test_auth():
+    """Test endpoint to verify JWT authentication"""
+    family_id = get_jwt_identity()
+    return jsonify({
+        "message": "Authentication working!",
+        "family_id": family_id
+    })
+
 
 # OpenAI configuration
 openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
