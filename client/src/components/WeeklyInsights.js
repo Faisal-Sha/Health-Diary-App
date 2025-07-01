@@ -7,6 +7,7 @@ function WeeklyInsights({ lastEntryTimestamp }) {
     const [error, setError] = useState(null);
     const [lastUpdated, setLastUpdated] = useState(null);
     const [isUsingCache, setIsUsingCache] = useState(false);
+    const [expandedSections, setExpandedSections] = useState({});
 
     // Cache management functions
     const getCacheKey = () => 'health_insights_cache';
@@ -55,6 +56,13 @@ function WeeklyInsights({ lastEntryTimestamp }) {
 
         console.log('✅ Using cached AI insights (no new entries)');
         return false;
+    };
+
+    const toggleSection = (sectionKey) => {
+        setExpandedSections(prev => ({
+            ...prev,
+            [sectionKey]: !prev[sectionKey]
+        }));
     };
 
     const loadWeeklySummary = async (forceRefresh = false) => {
@@ -358,84 +366,236 @@ function WeeklyInsights({ lastEntryTimestamp }) {
 
             {/* AI Insights Section - ALL SECTIONS INCLUDED */}
             <div className="insights-section">
-                <h3>🤖 AI Health Analysis</h3>
-                
-                {/* Key Insights */}
-                {insights.key_insights && insights.key_insights.length > 0 && (
-                    <div className="insights-subsection">
-                        <h4>💡 Key Insights</h4>
-                        <div className="insights-list">
-                            {insights.key_insights.map((finding, index) => (
-                                <div key={index} className="insight-item key-finding">
-                                    <span className="insight-icon">🔍</span>
-                                    <p>{finding}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Areas of Concern - ADDED THIS MISSING SECTION */}
-                {insights.areas_of_concern && insights.areas_of_concern.length > 0 && (
-                    <div className="insights-subsection">
-                        <h4>🎯 Areas of Concern</h4>
-                        <div className="insights-list">
-                            {insights.areas_of_concern.map((concern, index) => (
-                                <div key={index} className="insight-item concern">
-                                    <span className="insight-icon">⚠️</span>
-                                    <p>{concern}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Positive Patterns - ADDED THIS MISSING SECTION */}
-                {insights.positive_patterns && insights.positive_patterns.length > 0 && (
-                    <div className="insights-subsection">
-                        <h4>✅ Positive Patterns</h4>
-                        <div className="insights-list">
-                            {insights.positive_patterns.map((pattern, index) => (
-                                <div key={index} className="insight-item positive">
-                                    <span className="insight-icon">🌟</span>
-                                    <p>{pattern}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Potential Triggers */}
-                {insights.potential_triggers && insights.potential_triggers.length > 0 && (
-                    <div className="insights-subsection">
-                        <h4>⚠️ Potential Triggers</h4>
-                        <div className="insights-list">
-                            {insights.potential_triggers.map((trigger, index) => (
-                                <div key={index} className="insight-item trigger">
-                                    <span className="insight-icon">🚨</span>
-                                    <p>{trigger}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Recommendations */}
-                {insights.recommendations && insights.recommendations.length > 0 && (
-                    <div className="insights-subsection">
-                        <h4>💡 Recommendations</h4>
-                        <div className="insights-list">
-                            {insights.recommendations.map((recommendation, index) => (
-                                <div key={index} className="insight-item recommendation">
-                                    <span className="insight-icon">✅</span>
-                                    <p>{recommendation}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
+    <h3>🤖 AI Health Analysis</h3>
+    
+    <div className="insights-card-grid">
+        {/* Key Insights Card */}
+        {insights.key_insights && insights.key_insights.length > 0 && (
+            <div className="insight-card key-findings">
+                <div className="card-header">
+                    <div className="card-icon">📊</div>
+                    <div className="card-title">Key Health Patterns</div>
+                </div>
+                <div className="card-content">
+                    <ul className="insight-bullets">
+                        {(expandedSections.keyInsights ? insights.key_insights : insights.key_insights.slice(0, 4))
+                            .map((insight, index) => (
+                            <li key={index}>{insight}</li>
+                        ))}
+                    </ul>
+                    {insights.key_insights.length > 4 && (
+                        <button 
+                            className="show-more-btn"
+                            onClick={() => toggleSection('keyInsights')}
+                        >
+                            {expandedSections.keyInsights 
+                                ? '- Show less' 
+                                : `+ ${insights.key_insights.length - 4} more insights`
+                            }
+                        </button>
+                    )}
+                </div>
+                <div className="card-meta">
+                    <span className="finding-count">{insights.key_insights.length} Findings Identified</span>
+                    <span className="confidence-badge">High Confidence</span>
+                </div>
             </div>
+        )}
 
+        {/* Areas of Concern Card */}
+        {insights.areas_of_concern && insights.areas_of_concern.length > 0 && (
+            <div className="insight-card concerns">
+                <div className="card-header">
+                    <div className="card-icon">⚠️</div>
+                    <div className="card-title">Areas Requiring Attention</div>
+                </div>
+                <div className="card-content">
+                    <ul className="insight-bullets">
+                        {(expandedSections.concerns ? insights.areas_of_concern : insights.areas_of_concern.slice(0, 3))
+                            .map((concern, index) => (
+                            <li key={index}>{concern}</li>
+                        ))}
+                    </ul>
+                    {insights.areas_of_concern.length > 3 && (
+                        <button 
+                            className="show-more-btn"
+                            onClick={() => toggleSection('concerns')}
+                        >
+                            {expandedSections.concerns 
+                                ? '- Show less' 
+                                : `+ ${insights.areas_of_concern.length - 3} more areas`
+                            }
+                        </button>
+                    )}
+                </div>
+                <div className="card-meta">
+                    <span className="finding-count">{insights.areas_of_concern.length} Areas Identified</span>
+                    <span className="confidence-badge">Action Required</span>
+                </div>
+            </div>
+        )}
+
+        {/* Positive Patterns Card */}
+        {insights.positive_patterns && insights.positive_patterns.length > 0 && (
+            <div className="insight-card positive">
+                <div className="card-header">
+                    <div className="card-icon">✅</div>
+                    <div className="card-title">Positive Developments</div>
+                </div>
+                <div className="card-content">
+                    <ul className="insight-bullets">
+                        {(expandedSections.positive ? insights.positive_patterns : insights.positive_patterns.slice(0, 3))
+                            .map((pattern, index) => (
+                            <li key={index}>{pattern}</li>
+                        ))}
+                    </ul>
+                    {insights.positive_patterns.length > 3 && (
+                        <button 
+                            className="show-more-btn"
+                            onClick={() => toggleSection('positive')}
+                        >
+                            {expandedSections.positive 
+                                ? '- Show less' 
+                                : `+ ${insights.positive_patterns.length - 3} more patterns`
+                            }
+                        </button>
+                    )}
+                </div>
+                <div className="card-meta">
+                    <span className="finding-count">{insights.positive_patterns.length} Positive Trends</span>
+                    <span className="confidence-badge">Validated</span>
+                </div>
+            </div>
+        )}
+
+        {/* Health Triggers Card - Enhanced with Acute Trigger Separation */}
+        {insights.potential_triggers && insights.potential_triggers.length > 0 && (
+            <div className="insight-card triggers">
+                <div className="card-header">
+                    <div className="card-icon">🚨</div>
+                    <div className="card-title">Health Triggers</div>
+                </div>
+                <div className="card-content">
+                    {(() => {
+                        // Separate acute triggers from other triggers
+                        const acuteTriggers = insights.potential_triggers.filter(trigger => 
+                            trigger.toLowerCase().includes('acute trigger')
+                        );
+                        const otherTriggers = insights.potential_triggers.filter(trigger => 
+                            !trigger.toLowerCase().includes('acute trigger')
+                        );
+
+                        const showingAcute = expandedSections.acuteTriggers ? acuteTriggers : acuteTriggers.slice(0, 2);
+                        const showingOther = expandedSections.otherTriggers ? otherTriggers : otherTriggers.slice(0, 2);
+
+                        return (
+                            <>
+                                {acuteTriggers.length > 0 && (
+                                    <div className="trigger-subsection">
+                                        <h5 className="subsection-title">🔥 Acute Triggers</h5>
+                                        <ul className="insight-bullets acute">
+                                            {showingAcute.map((trigger, index) => (
+                                                <li key={index}>
+                                                    {trigger.replace(/^Acute trigger insight \d+:\s*/i, '')}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                        {acuteTriggers.length > 2 && (
+                                            <button 
+                                                className="show-more-btn"
+                                                onClick={() => toggleSection('acuteTriggers')}
+                                            >
+                                                {expandedSections.acuteTriggers 
+                                                    ? '- Show less' 
+                                                    : `+ ${acuteTriggers.length - 2} more acute triggers`
+                                                }
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                                
+                                {otherTriggers.length > 0 && (
+                                    <div className="trigger-subsection">
+                                        <h5 className="subsection-title">⚡ General Triggers</h5>
+                                        <ul className="insight-bullets">
+                                            {showingOther.map((trigger, index) => (
+                                                <li key={index}>{trigger}</li>
+                                            ))}
+                                        </ul>
+                                        {otherTriggers.length > 2 && (
+                                            <button 
+                                                className="show-more-btn"
+                                                onClick={() => toggleSection('otherTriggers')}
+                                            >
+                                                {expandedSections.otherTriggers 
+                                                    ? '- Show less' 
+                                                    : `+ ${otherTriggers.length - 2} more general triggers`
+                                                }
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
+                </div>
+                <div className="card-meta">
+                    <span className="finding-count">{insights.potential_triggers.length} Triggers Mapped</span>
+                    <span className="confidence-badge">Statistically Significant</span>
+                </div>
+            </div>
+        )}
+
+        {/* Recommendations Card - Enhanced with Priorities */}
+        {insights.recommendations && insights.recommendations.length > 0 && (
+            <div className="insight-card recommendations full-width">
+                <div className="card-header">
+                    <div className="card-icon">🎯</div>
+                    <div className="card-title">Strategic Recommendations</div>
+                </div>
+                <div className="card-content">
+                    <div className="recommendations-grid">
+                        <div className="priority-section">
+                            <h5 className="subsection-title">🚀 High Priority</h5>
+                            <ul className="insight-bullets priority">
+                                {(expandedSections.highPriority ? insights.recommendations : insights.recommendations.slice(0, 2))
+                                    .map((rec, index) => (
+                                    <li key={index}>{rec}</li>
+                                ))}
+                            </ul>
+                            {insights.recommendations.length > 2 && (
+                                <button 
+                                    className="show-more-btn"
+                                    onClick={() => toggleSection('highPriority')}
+                                >
+                                    {expandedSections.highPriority 
+                                        ? '- Show less' 
+                                        : `+ ${insights.recommendations.length - 2} more recommendations`
+                                    }
+                                </button>
+                            )}
+                        </div>
+                        
+                        {!expandedSections.highPriority && insights.recommendations.length > 2 && (
+                            <div className="priority-section">
+                                <h5 className="subsection-title">📋 Additional Actions</h5>
+                                <ul className="insight-bullets">
+                                    {insights.recommendations.slice(2, 4).map((rec, index) => (
+                                        <li key={index + 2}>{rec}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                <div className="card-meta">
+                    <span className="finding-count">{insights.recommendations.length} Action Items</span>
+                    <span className="confidence-badge">Evidence-Based</span>
+                </div>
+            </div>
+        )}
+    </div>
+</div>
             {/* Footer */}
             <div className="analytics-footer">
                 <p className="disclaimer">

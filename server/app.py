@@ -10,6 +10,12 @@ from dotenv import load_dotenv
 from analytics_engine import HealthAnalyticsEngine
 import re
 from datetime import datetime, timedelta
+from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
+from datetime import timedelta
+
+
+from auth_routes import register_auth_routes
+from family_routes import register_family_routes
 
 
 # Load environment variables from .env file
@@ -21,6 +27,14 @@ CORS(app, origins=["http://localhost:3000"])  # Allow React frontend to connect
 
 # Database configuration
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://username:password@localhost/health_app')
+
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)  # Tokens last 7 days
+jwt = JWTManager(app)
+
+
+register_auth_routes(app)
+register_family_routes(app)
 
 # OpenAI configuration
 openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
@@ -272,82 +286,96 @@ def health_check():
     })
 
 @app.route('/api/entries', methods=['POST'])
+@jwt_required()  # Now requires authentication
 def create_entry():
     """Create a new diary entry with temporal-aware AI processing"""
     try:
+        # Get the family_id from the JWT token
+        family_id = get_jwt_identity()
+        
         data = request.get_json()
         diary_text = data.get('text', '')
         entry_date = data.get('date', datetime.now().date().isoformat())
-        user_id = data.get('user_id', 1)  # ✅ FIX: Get user_id from request
+        user_id = data.get('user_id')  # Profile ID passed from frontend
         
         if not diary_text.strip():
             return jsonify({"error": "Entry text cannot be empty"}), 400
+        
+        if not user_id:
+            return jsonify({"error": "User profile must be selected"}), 400
+        
+        # Verify the user belongs to this family (SECURITY CHECK)
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cursor = conn.cursor()
+        
+        # Make sure this user profile belongs to the authenticated family
+        cursor.execute("""
+            SELECT id FROM users 
+            WHERE id = %s AND family_id = %s
+        """, (user_id, family_id))
+        
+        if not cursor.fetchone():
+            return jsonify({"error": "Invalid user profile"}), 403
         
         print(f"🔄 Processing entry for user {user_id} on {entry_date}")
         
         # Process text with enhanced temporal-aware AI
         ai_data = extract_health_data_with_ai(diary_text, user_id, entry_date)
         
-        # Save to database
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({"error": "Database connection failed"}), 500
+        # Insert raw entry
+        cursor.execute("""
+            INSERT INTO raw_entries (user_id, entry_text, entry_date, created_at)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id
+        """, (user_id, diary_text, entry_date, datetime.now()))
         
-        try:
-            cursor = conn.cursor()
-            
-            # Insert raw entry
-            cursor.execute("""
-                INSERT INTO raw_entries (user_id, entry_text, entry_date, created_at)
-                VALUES (%s, %s, %s, %s)
-                RETURNING id
-            """, (user_id, diary_text, entry_date, datetime.now()))  # ✅ FIX: Use user_id variable
-            
-            raw_entry_id = cursor.fetchone()['id']
-            
-            # Insert processed health metrics
-            cursor.execute("""
-                INSERT INTO health_metrics (
-                    user_id, raw_entry_id, entry_date, mood_score, energy_level,
-                    pain_level, sleep_quality, sleep_hours, stress_level,
-                    ai_confidence, created_at
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING id
-            """, (
-                user_id, raw_entry_id, entry_date,  # ✅ FIX: Use user_id variable
-                ai_data.get('mood_score'), ai_data.get('energy_level'),
-                ai_data.get('pain_level'), ai_data.get('sleep_quality'),
-                ai_data.get('sleep_hours'), ai_data.get('stress_level'),
-                ai_data.get('confidence', 0.0), datetime.now()
-            ))
-            
-            health_metric_id = cursor.fetchone()['id']
-            
-            conn.commit()
-            
-            print(f"✅ Entry saved successfully")
-            print(f"🔍 Temporal patterns detected: {len(ai_data.get('temporal_analysis', {}).get('delayed_food_effects', []))}")
-            
-            return jsonify({
-                "success": True,
-                "entry_id": raw_entry_id,
-                "health_metric_id": health_metric_id,  # ✅ ADDED: Include this for completeness
-                "ai_confidence": ai_data.get('confidence', 0.0),
-                "temporal_insights": {
-                    "delayed_effects_detected": len(ai_data.get('temporal_analysis', {}).get('delayed_food_effects', [])),
-                    "pattern_confidence": ai_data.get('temporal_analysis', {}).get('pattern_recognition', {}).get('trigger_confidence_level', 'low')
-                },
-                "message": "Entry processed with temporal health analysis"
-            })
-            
-        finally:
-            cursor.close()
-            conn.close()
-            
+        raw_entry_id = cursor.fetchone()['id']
+        
+        # Insert processed health metrics
+        cursor.execute("""
+            INSERT INTO health_metrics (
+                user_id, raw_entry_id, entry_date, mood_score, energy_level,
+                pain_level, sleep_quality, sleep_hours, stress_level,
+                ai_confidence, created_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            user_id, raw_entry_id, entry_date,
+            ai_data.get('mood_score'), ai_data.get('energy_level'),
+            ai_data.get('pain_level'), ai_data.get('sleep_quality'),
+            ai_data.get('sleep_hours'), ai_data.get('stress_level'),
+            ai_data.get('confidence', 0.0), datetime.now()
+        ))
+        
+        # Update user's last_active timestamp
+        cursor.execute("""
+            UPDATE users SET last_active = NOW() WHERE id = %s
+        """, (user_id,))
+        
+        conn.commit()
+        
+        print(f"✅ Entry saved successfully")
+        
+        return jsonify({
+            "success": True,
+            "entry_id": raw_entry_id,
+            "ai_confidence": ai_data.get('confidence', 0.0),
+            "temporal_insights": {
+                "delayed_effects_detected": len(ai_data.get('temporal_analysis', {}).get('delayed_food_effects', [])),
+                "pattern_confidence": ai_data.get('temporal_analysis', {}).get('pattern_recognition', {}).get('trigger_confidence_level', 'low')
+            },
+            "message": "Entry processed with temporal health analysis"
+        })
+        
     except Exception as e:
         print(f"❌ Error creating entry: {e}")
         return jsonify({"error": "Failed to create entry"}), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
 
 
 def extract_health_data_with_ai(diary_text, user_id=1, entry_date=None):
@@ -729,67 +757,81 @@ def get_enhanced_fallback_data():
     
 
 @app.route('/api/entries', methods=['GET'])
+@jwt_required()  # Now requires authentication
 def get_entries():
-    """Get diary entries for a user"""
+    """Get diary entries for a specific user profile"""
     try:
+        family_id = get_jwt_identity()
+        
         # Get query parameters
+        user_id = request.args.get('user_id')  # Profile ID
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
         limit = request.args.get('limit', 50)
+        
+        if not user_id:
+            return jsonify({"error": "user_id parameter is required"}), 400
         
         conn = get_db_connection()
         if not conn:
             return jsonify({"error": "Database connection failed"}), 500
         
-        try:
-            cursor = conn.cursor()
-            
-            query = """
-                SELECT 
-                    re.id,
-                    re.entry_text,
-                    re.entry_date,
-                    re.created_at,
-                    hm.mood_score,
-                    hm.energy_level,
-                    hm.pain_level,
-                    hm.sleep_quality,
-                    hm.sleep_hours,
-                    hm.stress_level,
-                    hm.ai_confidence
-                FROM raw_entries re
-                LEFT JOIN health_metrics hm ON re.id = hm.raw_entry_id
-                WHERE re.user_id = %s
-            """
-            
-            params = [1]  # user_id=1 for now
-            
-            if start_date:
-                query += " AND re.entry_date >= %s"
-                params.append(start_date)
-            
-            if end_date:
-                query += " AND re.entry_date <= %s"
-                params.append(end_date)
-            
-            query += " ORDER BY re.created_at DESC LIMIT %s"
-            params.append(limit)
-            
-            cursor.execute(query, params)
-            entries = cursor.fetchall()
-            
-            return jsonify({
-                "entries": [dict(entry) for entry in entries],
-                "count": len(entries)
-            })
-            
-        finally:
-            cursor.close()
-            conn.close()
-            
+        cursor = conn.cursor()
+        
+        # Security check: make sure this user belongs to the authenticated family
+        cursor.execute("""
+            SELECT id FROM users 
+            WHERE id = %s AND family_id = %s
+        """, (user_id, family_id))
+        
+        if not cursor.fetchone():
+            return jsonify({"error": "Invalid user profile"}), 403
+        
+        query = """
+            SELECT 
+                re.id,
+                re.entry_text,
+                re.entry_date,
+                re.created_at,
+                hm.mood_score,
+                hm.energy_level,
+                hm.pain_level,
+                hm.sleep_quality,
+                hm.sleep_hours,
+                hm.stress_level,
+                hm.ai_confidence
+            FROM raw_entries re
+            LEFT JOIN health_metrics hm ON re.id = hm.raw_entry_id
+            WHERE re.user_id = %s
+        """
+        
+        params = [user_id]
+        
+        if start_date:
+            query += " AND re.entry_date >= %s"
+            params.append(start_date)
+        
+        if end_date:
+            query += " AND re.entry_date <= %s"
+            params.append(end_date)
+        
+        query += " ORDER BY re.created_at DESC LIMIT %s"
+        params.append(limit)
+        
+        cursor.execute(query, params)
+        entries = cursor.fetchall()
+        
+        return jsonify({
+            "entries": [dict(entry) for entry in entries],
+            "count": len(entries)
+        })
+        
     except Exception as e:
         print(f"Error fetching entries: {e}")
         return jsonify({"error": "Failed to fetch entries"}), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
 
 @app.route('/api/analytics/summary', methods=['GET'])
 def get_health_summary():
@@ -1421,6 +1463,8 @@ def clear_all_entries():
             "success": False,
             "error": "Failed to clear all entries"
         }), 500
+    
+
 
 @app.route('/api/entries/bulk-delete', methods=['DELETE'])
 def bulk_delete_entries():
@@ -1480,8 +1524,9 @@ def bulk_delete_entries():
     
 
 if __name__ == '__main__':
-    print("🚀 Starting Health App Backend...")
+    print("🚀 Starting Health App Backend with Authentication...")
     print("📊 Database URL:", DATABASE_URL)
     print("🤖 OpenAI API configured:", "✅" if os.getenv('OPENAI_API_KEY') else "❌")
+    print("🔐 JWT Secret configured:", "✅" if os.getenv('JWT_SECRET_KEY') else "⚠️  Using default (change for production)")
     
     app.run(debug=True, host='0.0.0.0', port=5001)

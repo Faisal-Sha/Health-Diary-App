@@ -1,4 +1,4 @@
-/* Professional AI Health Analysis Dashboard - Compact & Clean */
+/* Professional AI Health Analysis Dashboard - Card Grid Layout */
 
 .analytics-dashboard {
     max-width: 1200px;
@@ -7,8 +7,9 @@
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     min-height: 100vh;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: 14px; /* Base font size reduced */
+    font-size: 14px;
     line-height: 1.5;
+    color: #1e293b;
 }
 
 /* Professional Header - Compact */
@@ -22,14 +23,14 @@
 }
 
 .analytics-header h2 {
-    font-size: 24px; /* Reduced from 28px */
+    font-size: 24px;
     font-weight: 700;
     margin: 0 0 6px 0;
     letter-spacing: -0.02em;
 }
 
 .mini-header {
-    font-size: 14px; /* Reduced from 16px */
+    font-size: 14px;
     color: #cbd5e1;
     margin: 0 0 16px 0;
     line-height: 1.4;
@@ -40,7 +41,7 @@
     flex-wrap: wrap;
     gap: 16px;
     margin-bottom: 16px;
-    font-size: 13px; /* Reduced size */
+    font-size: 13px;
 }
 
 .period-dates,
@@ -65,7 +66,7 @@
     border: none;
     border-radius: 6px;
     padding: 8px 14px;
-    font-size: 12px; /* Smaller buttons */
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -89,7 +90,7 @@
 .metrics-overview {
     background: white;
     border-radius: 12px;
-    padding: 20px; /* Reduced padding */
+    padding: 20px;
     margin-bottom: 20px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
     border: 1px solid #e2e8f0;
@@ -98,145 +99,61 @@
 .metrics-overview h3 {
     color: #1e293b;
     margin: 0 0 16px 0;
-    font-size: 18px; /* Reduced from larger */
+    font-size: 18px;
     font-weight: 700;
     text-align: center;
 }
 
 .metrics-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* Smaller min-width */
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 16px;
 }
 
 .metric-card {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0;
     border-radius: 10px;
-    padding: 16px; /* Reduced padding */
+    padding: 16px;
     text-align: center;
     transition: all 0.3s ease;
-    border: 2px solid transparent;
 }
 
 .metric-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-    border-color: #667eea;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
 }
 
-.metric-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-}
-
-.metric-header h4 {
-    margin: 0;
-    color: #374151;
-    font-size: 13px; /* Smaller text */
-    font-weight: 600;
-}
-
-.trend-indicator {
-    font-size: 16px; /* Slightly smaller emoji */
-}
-
-.value-number {
-    font-size: 28px; /* Reduced from 2.5rem */
-    font-weight: 800;
-    display: block;
-    line-height: 1;
-}
-
-.value-scale {
-    font-size: 12px; /* Smaller scale text */
-    color: #6b7280;
-    margin-left: 4px;
-}
-
-.trend-text small {
+.metric-label {
+    font-size: 12px;
     color: #6b7280;
     font-weight: 600;
-    font-size: 11px; /* Very small trend text */
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-/* Correlations Section - Compact */
-.correlations-section {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e2e8f0;
-}
-
-.correlations-section h3 {
-    color: #1e293b;
-    margin: 0 0 8px 0;
-    font-size: 18px; /* Reduced size */
-    font-weight: 700;
-    text-align: center;
-}
-
-.section-description {
-    text-align: center;
-    color: #64748b;
-    margin: 0 0 16px 0;
-    font-style: italic;
-    font-size: 13px; /* Smaller description */
-}
-
-.correlations-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.correlation-card {
-    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-    border: 1px solid #f39c12;
-    border-radius: 8px;
-    padding: 16px; /* Reduced padding */
-    transition: all 0.3s ease;
-}
-
-.correlation-card:hover {
-    transform: translateX(3px);
-    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.2);
-}
-
-.correlation-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    letter-spacing: 0.5px;
     margin-bottom: 8px;
 }
 
-.correlation-strength {
-    font-size: 11px; /* Smaller badge text */
+.metric-value {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 4px;
+}
+
+.value-number {
+    font-size: 28px;
     font-weight: 700;
-    color: #e67e22;
+    color: #1e293b;
 }
 
-.correlation-coefficient {
-    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-    font-size: 12px; /* Smaller coefficient */
-    color: #8e44ad;
-    font-weight: 600;
+.value-scale {
+    font-size: 14px;
+    color: #6b7280;
+    font-weight: 500;
 }
 
-.correlation-insight {
-    margin: 0;
-    color: #374151;
-    line-height: 1.5;
-    font-size: 13px; /* Smaller insight text */
-}
-
-/* AI Insights Section - Professional & Compact */
-.insights-section {
+/* Correlations Section */
+.correlations-section {
     background: white;
     border-radius: 12px;
     padding: 24px;
@@ -245,10 +162,79 @@
     border: 1px solid #e2e8f0;
 }
 
-.insights-section h3 {
+.correlations-section h3 {
     color: #1e293b;
     margin: 0 0 20px 0;
-    font-size: 18px; /* Reduced size */
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.correlations-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.correlation-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 16px;
+    transition: all 0.3s ease;
+}
+
+.correlation-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.correlation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.correlation-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.correlation-coefficient {
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
+    font-size: 12px;
+    color: #8e44ad;
+    font-weight: 600;
+}
+
+.correlation-insight {
+    margin: 0;
+    color: #374151;
+    line-height: 1.5;
+    font-size: 13px;
+}
+
+/* NEW: AI INSIGHTS SECTION - CARD GRID LAYOUT */
+.insights-section {
+    background: white;
+    border-radius: 12px;
+    padding: 32px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+}
+
+.insights-section h3 {
+    color: #1e293b;
+    margin: 0 0 24px 0;
+    font-size: 20px;
     font-weight: 700;
     text-align: center;
     position: relative;
@@ -266,101 +252,135 @@
     border-radius: 1px;
 }
 
-.insights-subsection {
-    margin-bottom: 24px;
+/* Card Grid Layout (2x2 + full width) */
+.insights-card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-top: 20px;
 }
 
-.insights-subsection h4 {
-    color: #374151;
-    margin: 0 0 12px 0;
-    font-size: 16px; /* Smaller subsection headers */
-    font-weight: 600;
+.insight-card {
+    background: white;
+    border-radius: 12px;
+    padding: 28px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.insight-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: var(--accent-color);
+}
+
+.insight-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+.card-header {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #f1f5f9;
+    gap: 12px;
+    margin-bottom: 16px;
 }
 
-.insights-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.insight-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 16px; /* Reduced padding */
+.card-icon {
+    width: 40px;
+    height: 40px;
     border-radius: 8px;
-    transition: all 0.3s ease;
-    border-left: 3px solid transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    background: var(--icon-bg);
+    color: var(--icon-color);
+    flex-shrink: 0;
 }
 
-.insight-item p {
-    margin: 0;
+.card-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.card-content {
     color: #374151;
     line-height: 1.6;
-    font-size: 13px; /* Smaller insight text for better readability */
+    font-size: 14px;
+    margin-bottom: 16px;
     text-align: justify;
+    hyphens: auto;
 }
 
-.insight-icon {
-    font-size: 16px; /* Smaller icons */
-    flex-shrink: 0;
-    margin-top: 2px;
+.card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 16px;
+    border-top: 1px solid #f1f5f9;
+    font-size: 12px;
 }
 
-/* Color-coded insight types */
-.insight-item.key-finding {
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    border-left-color: #0ea5e9;
+.finding-count {
+    color: #64748b;
+    font-weight: 500;
 }
 
-.insight-item.key-finding:hover {
-    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-    transform: translateX(2px);
+.confidence-badge {
+    background: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-.insight-item.concern {
-    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-    border-left-color: #f59e0b;
+/* Full-width cards (recommendations, etc.) */
+.insight-card.full-width {
+    grid-column: 1 / -1;
 }
 
-.insight-item.concern:hover {
-    background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
-    transform: translateX(2px);
+/* Color schemes for different insight types */
+.insight-card.key-findings {
+    --accent-color: #0ea5e9;
+    --icon-bg: rgba(14, 165, 233, 0.1);
+    --icon-color: #0369a1;
 }
 
-.insight-item.positive {
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-    border-left-color: #22c55e;
+.insight-card.concerns {
+    --accent-color: #f59e0b;
+    --icon-bg: rgba(245, 158, 11, 0.1);
+    --icon-color: #d97706;
 }
 
-.insight-item.positive:hover {
-    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-    transform: translateX(2px);
+.insight-card.positive {
+    --accent-color: #10b981;
+    --icon-bg: rgba(16, 185, 129, 0.1);
+    --icon-color: #059669;
 }
 
-.insight-item.trigger {
-    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-    border-left-color: #ef4444;
+.insight-card.triggers {
+    --accent-color: #ef4444;
+    --icon-bg: rgba(239, 68, 68, 0.1);
+    --icon-color: #dc2626;
 }
 
-.insight-item.trigger:hover {
-    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-    transform: translateX(2px);
-}
-
-.insight-item.recommendation {
-    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-    border-left-color: #8b5cf6;
-}
-
-.insight-item.recommendation:hover {
-    background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
-    transform: translateX(2px);
+.insight-card.recommendations {
+    --accent-color: #8b5cf6;
+    --icon-bg: rgba(139, 92, 246, 0.1);
+    --icon-color: #7c3aed;
 }
 
 /* Loading States - Professional */
@@ -472,7 +492,7 @@
 
 .disclaimer {
     margin: 0;
-    font-size: 12px; /* Small disclaimer text */
+    font-size: 12px;
     line-height: 1.5;
     color: #6b7280;
     text-align: center;
@@ -522,12 +542,18 @@
         padding: 20px;
     }
     
-    .insight-item {
-        padding: 12px;
+    /* Mobile: Single column for cards */
+    .insights-card-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
     }
     
-    .insight-item p {
-        font-size: 12px;
+    .insight-card {
+        padding: 20px;
+    }
+    
+    .card-content {
+        font-size: 13px;
     }
 }
 
@@ -552,13 +578,23 @@
         padding: 12px;
     }
     
-    .insights-subsection h4 {
-        font-size: 14px;
+    .insight-card {
+        padding: 16px;
     }
     
-    .insight-item p {
-        font-size: 11px;
+    .card-content {
+        font-size: 12px;
         line-height: 1.5;
+    }
+    
+    .card-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+    }
+    
+    .card-title {
+        font-size: 16px;
     }
 }
 
@@ -586,7 +622,169 @@
         display: none;
     }
     
-    .insight-item {
+    .insight-card {
         break-inside: avoid;
     }
+}
+
+.card-content {
+    color: #374151;
+    line-height: 1.6;
+    font-size: 15px; /* Slightly larger for better readability */
+    margin-bottom: 16px;
+}
+
+/* Bullet Point Lists for Better Scanning */
+.insight-bullets {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.insight-bullets li {
+    padding: 8px 0 8px 20px;
+    position: relative;
+    line-height: 1.5;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    font-size: 14px;
+}
+
+.insight-bullets li:last-child {
+    border-bottom: none;
+}
+
+.insight-bullets li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: var(--accent-color);
+    font-weight: bold;
+    font-size: 16px;
+}
+
+/* Special styling for acute triggers */
+.insight-bullets.acute li::before {
+    content: '🔥';
+    font-size: 14px;
+}
+
+.insight-bullets.priority li::before {
+    content: '⭐';
+    font-size: 14px;
+}
+
+/* Subsections within cards */
+.trigger-subsection,
+.priority-section {
+    margin-bottom: 16px;
+}
+
+.trigger-subsection:last-child,
+.priority-section:last-child {
+    margin-bottom: 0;
+}
+
+.subsection-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4b5563;
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Recommendations Grid Layout */
+.recommendations-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .recommendations-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+}
+
+/* Show More Button */
+.show-more-btn {
+    background: none;
+    border: 1px solid var(--accent-color);
+    color: var(--accent-color);
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 12px;
+}
+
+.show-more-btn:hover {
+    background: var(--accent-color);
+    color: white;
+    transform: translateY(-1px);
+}
+
+/* Enhanced card heights for better balance */
+.insight-card {
+    min-height: 280px; /* Ensures consistent card heights */
+    display: flex;
+    flex-direction: column;
+}
+
+.card-content {
+    flex: 1; /* Makes content area fill available space */
+}
+
+.card-meta {
+    margin-top: auto; /* Pushes meta to bottom */
+}
+
+/* Visual improvements for card readability */
+.insight-card {
+    padding: 24px; /* Slightly less padding for more content space */
+}
+
+.card-header {
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.card-title {
+    font-size: 16px; /* Slightly smaller title for more content space */
+}
+
+/* Improved spacing for different sections */
+.insight-bullets li {
+    padding: 6px 0 6px 20px; /* Tighter spacing */
+    font-size: 13px; /* Smaller but still readable */
+}
+
+/* Make confidence badges more prominent */
+.confidence-badge {
+    font-size: 11px;
+    padding: 5px 10px;
+}
+
+/* Special highlighting for high-priority items */
+.priority-section .insight-bullets li {
+    background: rgba(var(--accent-color-rgb, 139, 92, 246), 0.03);
+    border-radius: 4px;
+    margin-bottom: 4px;
+    padding: 8px 0 8px 20px;
+}
+
+/* Color variable definitions for priority highlighting */
+.insight-card.recommendations {
+    --accent-color-rgb: 139, 92, 246;
+}
+
+.insight-card.triggers {
+    --accent-color-rgb: 239, 68, 68;
 }

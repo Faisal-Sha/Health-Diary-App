@@ -3,10 +3,32 @@
 const BASE_URL = 'http://localhost:5001/api';
 
 class ApiService {
+
+  setAuthToken(token) {
+    this.authToken = token;
+  }
+
+  getAuthHeaders() {
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    if (this.authToken) {
+      headers['Authorization'] = `Bearer ${this.authToken}`;
+    }
+    
+    return headers;
+  }
+
   
   // Helper method to handle HTTP responses
   async handleResponse(response) {
     if (!response.ok) {
+      if (response.status === 401) {
+        // Token expired - trigger logout
+        window.dispatchEvent(new CustomEvent('auth-expired'));
+        throw new Error('Session expired. Please log in again.');
+      }
       const errorData = await response.json().catch(() => ({ error: 'Network error' }));
       throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
     }
@@ -25,10 +47,14 @@ class ApiService {
   }
 
   // Create a new diary entry
-  async createEntry(diaryText, entryDate = null) {
+  async createEntry(diaryText, selectedProfile, entryDate = null) {
     try {
+      if (!selectedProfile) {
+        throw new Error('No profile selected');
+      }
       const requestBody = {
         text: diaryText,
+        user_id: selectedProfile.id,
         date: entryDate || new Date().toLocaleDateString()
       };
 
@@ -36,9 +62,7 @@ class ApiService {
 
       const response = await fetch(`${BASE_URL}/entries`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify(requestBody)
       });
 
@@ -53,9 +77,15 @@ class ApiService {
   }
 
   // Get diary entries with optional filtering
-  async getEntries(options = {}) {
+  async getEntries(selectedProfile, options = {}) {
     try {
+      if (!selectedProfile) {
+        throw new Error('No profile selected');
+      }
+
       const params = new URLSearchParams();
+
+      params.append('user_id', selectedProfile.id);
       
       if (options.startDate) params.append('start_date', options.startDate);
       if (options.endDate) params.append('end_date', options.endDate);
@@ -65,7 +95,9 @@ class ApiService {
       
       console.log('📥 Fetching entries from:', url);
 
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: this.getAuthHeaders()
+      });
       const result = await this.handleResponse(response);
       
       console.log(`✅ Fetched ${result.entries.length} entries`);
@@ -78,9 +110,20 @@ class ApiService {
   }
 
   // Get health analytics summary
-  async getHealthSummary(days = 30) {
+  async getHealthSummary(selectedProfile, days = 30) {
     try {
-      const response = await fetch(`${BASE_URL}/analytics/summary?days=${days}`);
+      if (!selectedProfile) {
+        throw new Error('No profile selected');
+      }
+
+      const params = new URLSearchParams();
+      params.append('user_id', selectedProfile.id);
+      params.append('days', days.toString());
+
+      const response = await fetch(`${BASE_URL}/analytics/summary?${params.toString()}`, {
+        headers: this.getAuthHeaders()
+      }
+      );
       const result = await this.handleResponse(response);
       
       console.log('📊 Health summary fetched:', result);
@@ -228,9 +271,7 @@ class ApiService {
         
         const response = await fetch(`${BASE_URL}/entries/${entryId}`, {
             method: 'DELETE',
-            headers: {
-            'Content-Type': 'application/json',
-            }
+            headers: this.getAuthHeaders()
         });
     
         const result = await this.handleResponse(response);

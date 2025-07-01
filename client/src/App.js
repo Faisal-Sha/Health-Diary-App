@@ -10,7 +10,13 @@ import HealthCharts from './components/HealthCharts';
 import DeveloperTools from './components/DeveloperTools';
 import apiService from './services/apiService';
 
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import AuthForm from './components/AuthForm';
+import ProfileSelector from './components/ProfileSelector';
+
 function App() {
+
+  const { user, selectedProfile, authenticatedFetch } = useAuth();
 
   const [diaryText, setDiaryText] = useState(''); //what the user types
   const [diaryEntries, setDiaryEntries] = useState([]); //all the diary entries
@@ -52,6 +58,8 @@ function App() {
   const loadEntries = async () => {
     try {
       setIsLoading(true);
+      const response = await authenticatedFetch(`http://localhost:5001/api/entries?user_id=${selectedProfile.id}`);
+      
       setError(null);
       
       const result = await apiService.getEntries({ limit: 50 });
