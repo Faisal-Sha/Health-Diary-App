@@ -217,6 +217,10 @@ function AppContent() {
   const getEntriesForDate = (date) => {
     console.log('🔍 getEntriesForDate called with:', date);
     console.log('📊 Current diaryEntries array:', diaryEntries);
+    if (!selectedProfile) {
+      console.log('⚠️ No profile selected, returning empty array');
+      return [];
+    }
     
     const filteredEntries = diaryEntries.filter(entry => {
       console.log(`Comparing entry.date "${entry.date}" with requested date "${date}"`);
@@ -232,6 +236,11 @@ function AppContent() {
     console.log('🔍 getDatesWithEntries called');
     console.log('📊 Current diaryEntries array:', diaryEntries);
     
+    if (!selectedProfile) {
+      console.log('⚠️ No profile selected, returning empty array');
+      return [];
+    }
+
     const dates = diaryEntries.map(entry => {
       console.log(`Entry date: "${entry.date}"`);
       return entry.date;
@@ -445,6 +454,7 @@ function AppContent() {
               {/* Calendar View Content */}
               {currentView === 'calendar' && (
                 <Calendar 
+                  key={selectedProfile?.id} //Forces re-render
                   getDatesWithEntries={getDatesWithEntries}
                   getEntriesForDate={getEntriesForDate}
                   selectedDate={selectedDate}
@@ -478,17 +488,38 @@ function AppContent() {
                   <h3>Your Recent Entries ({diaryEntries.length} total)</h3>
 
                   {/* Grid layout */}
-                  {listViewMode === 'grid' && (
-                    <div className="entries-horizontal-container">
-                      {diaryEntries.map((entry) => (
-                        <DiaryEntry 
-                          key={entry.id}
-                          entry={entry}
-                          deleteEntry={handleDeleteEntry} 
-                        />
-                      ))}
+                  {listViewMode === 'grid' && diaryEntries.length > 0 && (
+                <div 
+                  className="entries-horizontal-container"
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '20px',
+                    padding: '20px 0',
+                    justifyContent: 'flex-start',
+                    alignItems: 'flex-start',
+                    textAlign: 'left',
+                    width: '100%'
+                  }}
+                >
+                  {diaryEntries.map((entry, index) => (
+                    <div
+                      key={entry.id || index}
+                      style={{
+                        flex: '0 0 300px',
+                        minWidth: '280px',
+                        maxWidth: '400px'
+                      }}
+                    >
+                      <DiaryEntry 
+                        entry={entry}
+                        deleteEntry={handleDeleteEntry}
+                        viewMode="grid"
+                      />
                     </div>
-                  )}
+                  ))}
+                </div>
+              )}
 
                   {/* Traditional list layout (vertical) */}
                   {listViewMode === 'list' && (
@@ -498,6 +529,7 @@ function AppContent() {
                           key={entry.id}
                           entry={entry}
                           deleteEntry={handleDeleteEntry}
+                          viewMode="list"
                         />
                       ))}
                     </div>

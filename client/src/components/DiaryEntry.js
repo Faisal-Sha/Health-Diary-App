@@ -1,7 +1,7 @@
 import React from 'react';
 import "./DiaryEntry.css";
 
-function DiaryEntry({entry, deleteEntry}) {
+function DiaryEntry({entry, deleteEntry, viewMode = 'list'}) {
     // Helper function to format AI scores for display
     const formatScore = (score, maxScore = 10) => {
         if (!score) return 'N/A';
@@ -24,8 +24,12 @@ function DiaryEntry({entry, deleteEntry}) {
         return `${Math.round(confidence * 100)}%`;
     };
 
+    // FIXED: Determine CSS class based on view mode
+    const isHorizontal = viewMode === 'grid';
+    const entryClass = isHorizontal ? 'diary-entry horizontal' : 'diary-entry';
+
     return (
-        <div key={entry.id} className="diary-entry">
+        <div key={entry.id} className={entryClass}>
             <div className="entry-header">
                 <div className="entry-date-time">
                     <span className="entry-date">{entry.date}</span>
@@ -43,40 +47,39 @@ function DiaryEntry({entry, deleteEntry}) {
                     🗑️
                 </button>
             </div>
-            
-            {/* Enhanced tags section with AI data */}
+
             <div className="entry-tags">
-                {/* Mood with emoji */}
-                <span className={`mood-tag mood-${entry.mood}`}>
-                    {getMoodEmoji(entry.mood)} Mood: {entry.mood}
-                    {entry.aiData?.moodScore && ` (${entry.aiData.moodScore}/10)`}
-                </span>
+                {/* Mood tag */}
+                {entry.mood && (
+                    <span className={`mood-tag mood-${entry.mood}`}>
+                        {getMoodEmoji(entry.mood)} Mood: {entry.mood}
+                    </span>
+                )}
                 
-                {/* Energy level if available */}
+                {/* Energy level */}
                 {entry.energy && (
-                    <span className="ai-tag energy-tag">
+                    <span className="mood-tag mood-neutral">
                         ⚡ Energy: {formatScore(entry.energy)}
                     </span>
                 )}
                 
-                {/* Pain level if above 0 */}
+                {/* Pain level */}
                 {entry.painLevel > 0 && (
-                    <span className="ai-tag pain-tag">
+                    <span className="mood-tag mood-negative">
                         🩹 Pain: {formatScore(entry.painLevel)}
                     </span>
                 )}
                 
-                {/* Sleep data if available */}
+                {/* Sleep info */}
                 {entry.sleepHours && (
-                    <span className="ai-tag sleep-tag">
+                    <span className="mood-tag mood-neutral">
                         😴 Sleep: {entry.sleepHours}h
-                        {entry.sleepQuality && ` (quality: ${formatScore(entry.sleepQuality)})`}
                     </span>
                 )}
                 
-                {/* Stress level if above normal */}
-                {entry.stressLevel > 5 && (
-                    <span className="ai-tag stress-tag">
+                {/* Stress level */}
+                {entry.stressLevel && (
+                    <span className="mood-tag mood-negative">
                         😰 Stress: {formatScore(entry.stressLevel)}
                     </span>
                 )}

@@ -866,6 +866,7 @@ def get_health_summary():
     """Get health analytics summary"""
     try:
         days = request.args.get('days', 30)
+        user_id = request.args.get('user_id', 1, type=int)
         
         conn = get_db_connection()
         if not conn:
@@ -886,8 +887,8 @@ def get_health_summary():
                 FROM health_metrics hm
                 JOIN raw_entries re ON hm.raw_entry_id = re.id
                 WHERE hm.user_id = %s 
-                AND re.entry_date >= CURRENT_DATE - INTERVAL '%s days'
-            """, (1, days))
+                AND re.entry_date >= CURRENT_DATE - INTERVAL %s
+            """, (user_id, f'{days} days'))
             
             summary = cursor.fetchone()
             

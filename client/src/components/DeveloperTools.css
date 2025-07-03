@@ -84,10 +84,6 @@
     margin: 0;
   }
   
-  .tool-content {
-    /* Content styling handled by individual sections */
-  }
-  
   /* Coming Soon Section */
   .coming-soon-notice {
     text-align: center;

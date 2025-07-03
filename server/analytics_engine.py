@@ -377,112 +377,204 @@ class HealthAnalyticsEngine:
         AI insights generation focused on ACUTE TRIGGERS - FIXED to prioritize specific triggers
         """
         
-        # Prepare raw data focusing on trigger identification
-        data_summary = {
-            'analysis_period': f"{stats.get('date_range', {}).get('start')} to {stats.get('date_range', {}).get('end')}",
-            'total_entries': stats.get('total_entries', 0),
-            'quantitative_metrics': stats,
-            'statistical_correlations': correlations,
-            'raw_diary_entries': [entry['entry_text'] for entry in raw_data if entry.get('entry_text')],
-            'daily_health_scores': [
-                {
-                    'date': entry.get('entry_date', '').isoformat() if entry.get('entry_date') else '',
+        # FIXED: Create the diary_entries_with_context that was missing
+        diary_entries_with_context = []
+        for entry in raw_data:
+            entry_context = {
+                'date': entry.get('entry_date', '').isoformat() if entry.get('entry_date') and hasattr(entry.get('entry_date'), 'isoformat') else str(entry.get('entry_date', '')),
+                'text': entry.get('entry_text', ''),
+                'health_scores': {
                     'mood': entry.get('mood_score'),
                     'energy': entry.get('energy_level'), 
                     'pain': entry.get('pain_level'),
                     'sleep_hours': entry.get('sleep_hours'),
                     'stress': entry.get('stress_level')
-                } for entry in raw_data
-            ]
-        }
+                }
+            }
+            diary_entries_with_context.append(entry_context)
         
         # ACUTE TRIGGER-FOCUSED PROMPT - prioritizes specific environmental/situational triggers
-        acute_trigger_prompt = f"""You are a specialized health pattern analyst focused on identifying ACUTE TRIGGERS that cause immediate or same-day health impacts.
+        trigger_analysis_prompt = f"""You are an expert health detective specializing in identifying SPECIFIC triggers from diary entries.
 
-    YOUR SPECIFIC TASK: Analyze the diary entries to identify specific, acute triggers that correlate with negative health symptoms or mood changes.
+    ANALYSIS TASK: Examine these diary entries and identify specific, named triggers that correlate with negative health symptoms.
 
-    ACUTE TRIGGERS TO LOOK FOR:
-    🍽️ FOOD TRIGGERS: Specific foods, food combinations, meal timing, food preparation methods
-    🌤️ WEATHER TRIGGERS: Temperature changes, humidity, barometric pressure, seasonal changes
-    🌸 ENVIRONMENTAL TRIGGERS: Pollen, air quality, allergens, dust, strong scents
-    💬 SOCIAL TRIGGERS: Arguments, conflicts, difficult conversations, social stress
-    📍 LOCATION TRIGGERS: Specific places that correlate with symptoms
-    ⏰ TIMING TRIGGERS: Time of day patterns, schedule disruptions
-    🏃 ACTIVITY TRIGGERS: Specific exercises, movements, or physical activities
+    DATA TO ANALYZE:
+    {json.dumps(diary_entries_with_context, indent=2, default=str)}
 
-    IGNORE CHRONIC PATTERNS: Do not focus on general stress levels, ongoing conditions, or long-term lifestyle patterns. Focus on specific, identifiable triggers that happened on or before symptom days.
+    CORRELATION INSIGHTS FROM STATISTICAL ANALYSIS:
+    {json.dumps(correlations, indent=2)}
 
-    DATA FOR ANALYSIS:
-    {json.dumps(data_summary, indent=2, default=str)}
+    TRIGGER DETECTION GUIDELINES:
 
-    ANALYSIS INSTRUCTIONS:
-    1. Examine each diary entry for mentions of specific foods, weather conditions, social events, or environmental factors
-    2. Look for correlations between these specific triggers and same-day or next-day health score changes
-    3. Identify trigger timing patterns (e.g., "symptoms appear 2-4 hours after eating X")
-    4. Focus on actionable, avoidable triggers rather than general stress or lifestyle factors
+    1. FOOD TRIGGERS - Look for specific mentions of:
+    - Specific foods, ingredients, spices, or dishes
+    - Eating patterns, meal timing, or food combinations
+    - Food preparation methods (fried, leftover, spicy, etc.)
+    - Beverages, alcohol, caffeine intake
 
-    Output your analysis in this JSON format:
+    2. ENVIRONMENTAL TRIGGERS - Look for:
+    - Weather conditions (humidity, temperature, pressure changes)
+    - Air quality, pollution, allergens, dust
+    - Lighting conditions (bright lights, screens, darkness)
+    - Noise levels, sound environments
+    - Location changes, travel, different environments
 
+    3. SOCIAL/EMOTIONAL TRIGGERS - Identify:
+    - Social situations, conflicts, or interactions
+    - Work stress, deadlines, meetings
+    - Family dynamics, relationship issues
+    - Financial concerns, life changes
+
+    4. LIFESTYLE TRIGGERS - Detect:
+    - Sleep patterns, sleep quality, sleep timing
+    - Exercise timing, intensity, or lack thereof
+    - Screen time, device usage patterns
+    - Routine disruptions, schedule changes
+
+    5. PHYSICAL TRIGGERS - Note:
+    - Posture changes, physical positions
+    - Hormone cycles, menstrual patterns
+    - Medication timing or changes
+    - Physical exertion, overuse injuries
+
+    ANALYSIS METHODOLOGY:
+    - For each diary entry, identify the day's health scores
+    - Look for entries where pain/stress/mood significantly worsened
+    - Cross-reference what specific items were mentioned on those days
+    - Identify patterns across multiple entries
+    - Focus on NAMED, SPECIFIC triggers rather than vague categories
+
+    REQUIRED OUTPUT FORMAT (valid JSON):
     {{
-        "overall_health_score": [1-10 integer based on data patterns],
-        "key_insights": [
-            "Acute trigger insight 1: Identify the most specific environmental or situational trigger that correlates with negative health outcomes. Include exact foods, weather conditions, or social situations with timing details.",
-            "Acute trigger insight 2: Analyze specific timing patterns for triggers - when do symptoms appear relative to trigger exposure? Include evidence from diary entries.",
-            "Acute trigger insight 3: Identify any food-related acute triggers, including specific ingredients, meal combinations, or eating patterns that precede symptoms.",
-            "Acute trigger insight 4: Examine environmental triggers like weather changes, allergens, or location-based factors that correlate with health score drops.",
-            "Acute trigger insight 5: Analyze social or situational acute triggers - specific events, interactions, or circumstances that immediately impact mood or physical symptoms."
+        "specific_triggers": [
+            {{
+                "trigger_name": "Old green tea leaves",
+                "category": "food",
+                "evidence_strength": "strong",
+                "occurrences": 3,
+                "symptoms_triggered": ["headache", "increased pain"],
+                "evidence_dates": ["2024-06-15", "2024-06-17"],
+                "explanation": "Mentioned consuming old green tea leaves on 3 occasions, all coinciding with headache reports within 2-4 hours"
+            }}
         ],
-        "potential_triggers": [
-            "PRIMARY ACUTE TRIGGER: [Specific food/weather/social trigger] - Appears [X times] in dataset, correlates with [specific symptoms/health score changes]. Pattern: [specific timing/context details]",
-            "SECONDARY ACUTE TRIGGER: [Another specific trigger] - Evidence: [specific diary mentions], Impact: [measurable health changes], Timing: [when symptoms appear relative to trigger]",
-            "ENVIRONMENTAL TRIGGER: [Weather/pollen/location factor] - Correlation with [specific symptoms], Frequency: [how often observed], Context: [environmental conditions]",
-            "SOCIAL/SITUATIONAL TRIGGER: [Specific social situation or stressor] - Impact on [mood/energy/pain scores], Pattern: [when and how it affects health metrics]"
+        "environmental_patterns": [
+            {{
+                "pattern": "Humid weather correlation",
+                "strength": "moderate",
+                "explanation": "Higher pain scores on days with humidity mentions"
+            }}
         ],
-        "recommendations": [
-            "ACUTE TRIGGER AVOIDANCE: Based on identified [specific trigger], recommend [specific avoidance strategy] with [implementation details and expected timeline for improvement]",
-            "TRIGGER MONITORING: Track [specific environmental factors/foods/situations] more closely using [specific tracking methods] to confirm trigger patterns",
-            "SYMPTOM MITIGATION: When [specific trigger] cannot be avoided, implement [specific coping strategies] within [timeframe] to minimize health impact"
-        ],
-        "areas_of_concern": [
-            "High-frequency acute trigger: [Specific trigger that appears frequently and consistently causes symptoms]",
-            "Delayed trigger effects: [Triggers that show delayed symptom onset, making them harder to identify]"
-        ],
-        "positive_patterns": [
-            "Trigger-free periods: [Patterns when specific triggers are avoided and health improves]",
-            "Effective coping: [Evidence of successful trigger management or mitigation strategies]"
+        "behavioral_insights": [
+            "Late dinner timing (after 8pm) shows correlation with poor sleep quality",
+            "Working late correlates with next-day headaches"
         ]
-    }}"""
+    }}
+
+    BE EXTREMELY SPECIFIC - name exact foods, specific environmental conditions, particular social situations, etc. Avoid generic terms like "certain foods" - instead identify "leftover rice", "spicy chutney", etc."""
 
         try:
             print("🤖 Generating acute trigger-focused AI insights...")
             
-            response = self.openai_client.chat.completions.create(
+            # STEP 1: Get trigger analysis
+            trigger_response = self.openai_client.chat.completions.create(
                 model="gpt-4o",
-                messages=[{"role": "user", "content": acute_trigger_prompt}],
+                messages=[{"role": "user", "content": trigger_analysis_prompt}],
                 temperature=0.1,
-                max_tokens=2500  # More tokens for detailed trigger analysis
+                max_tokens=2500
             )
             
-            ai_response = response.choices[0].message.content.strip()
+            trigger_analysis = trigger_response.choices[0].message.content.strip()
             
             # Clean response
-            if ai_response.startswith('```json'):
-                ai_response = ai_response.strip('```json').strip('```')
-            elif ai_response.startswith('```'):
-                ai_response = ai_response.strip('```')
-                
-            result = json.loads(ai_response)
+            if trigger_analysis.startswith('```json'):
+                trigger_analysis = trigger_analysis.strip('```json').strip('```')
+            elif trigger_analysis.startswith('```'):
+                trigger_analysis = trigger_analysis.strip('```')
+            
+            try:
+                trigger_data = json.loads(trigger_analysis)
+            except json.JSONDecodeError:
+                print("⚠️ Trigger analysis JSON parsing failed")
+                trigger_data = {"specific_triggers": [], "environmental_patterns": [], "behavioral_insights": []}
+            
+            # STEP 2: Synthesis prompt - FIXED to actually use it
+            synthesis_prompt = f"""You are a health strategist creating actionable recommendations based on trigger analysis.
+
+    TRIGGER ANALYSIS RESULTS:
+    {json.dumps(trigger_data, indent=2)}
+
+    YOUR TASK: Create specific, actionable insights and recommendations.
+
+    OUTPUT FORMAT (valid JSON):
+    {{
+        "key_insights": [
+            "Identified pickles as a potential headache trigger (3/3 occurrences)",
+            "Leftover rice consumption preceded pain increases in 2/2 instances"
+        ],
+        "potential_triggers": [
+            "pickles (strong correlation with headaches)",
+            "Leftover rice (moderate correlation with digestive issues)",
+            "High humidity days (environmental trigger for pain)",
+            "Late work sessions (stress-related trigger)"
+        ],
+        "recommendations": [
+            "Eliminate pickles for 2 weeks and track headache frequency",
+            "Avoid leftover rice or reheat thoroughly before consumption",
+            "Monitor weather patterns and take preventive measures on high humidity days",
+            "Set work cutoff time at 7pm to reduce next-day headache risk"
+        ],
+        "areas_of_concern": [
+            "Recurring headaches with dietary pattern correlation",
+            "Sleep quality degradation during stressful periods"
+        ],
+        "positive_patterns": [
+            "Early morning exercise correlates with better mood scores",
+            "Consistent 8+ hours sleep shows strong energy improvements"
+        ]
+    }}
+
+    Make each recommendation SPECIFIC and ACTIONABLE with clear next steps."""
+
+            print("🧠 Generating synthesis and recommendations...")
+            
+            # STEP 2: Get synthesis
+            synthesis_response = self.openai_client.chat.completions.create(
+                model="gpt-4o",
+                messages=[{"role": "user", "content": synthesis_prompt}],
+                temperature=0.2,
+                max_tokens=2000
+            )
+            
+            synthesis_result = synthesis_response.choices[0].message.content.strip()
+            
+            # Clean synthesis response
+            if synthesis_result.startswith('```json'):
+                synthesis_result = synthesis_result.strip('```json').strip('```')
+            elif synthesis_result.startswith('```'):
+                synthesis_result = synthesis_result.strip('```')
+            
+            try:
+                final_insights = json.loads(synthesis_result)
+            except json.JSONDecodeError:
+                print("⚠️ Synthesis JSON parsing failed")
+                final_insights = {
+                    "key_insights": ["Analysis completed but formatting issue occurred"],
+                    "potential_triggers": ["Check diary entries for patterns"],
+                    "recommendations": ["Continue detailed logging for better insights"],
+                    "areas_of_concern": ["Unable to process analysis results"],
+                    "positive_patterns": ["Regular logging is beneficial"]
+                }
             
             print("✅ AI insights generated successfully")
-            print(f"🎯 Generated {len(result.get('potential_triggers', []))} potential acute triggers")
+            print(f"🎯 Generated {len(final_insights.get('potential_triggers', []))} potential triggers")
             
-            return result
+            # FIXED: Return the correct format that your frontend expects
+            return final_insights
             
         except Exception as e:
             print(f"❌ AI insights generation error: {e}")
-            # Fallback with basic structure
+            # FIXED: Return correct fallback format
             return {
-                "overall_health_score": 5,
                 "key_insights": ["Unable to generate insights due to processing error"],
                 "potential_triggers": ["Analysis error - check data quality"],
                 "recommendations": ["Verify diary entry content and try again"],

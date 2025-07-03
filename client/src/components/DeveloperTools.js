@@ -77,6 +77,7 @@ function DeveloperTools({ onImportData, currentEntries, allEntries, onDataImport
                             onImportData={onImportData} 
                             currentEntries={currentEntries} 
                             allEntries={allEntries}
+                            selectedProfile={selectedProfile}
                         />
                     </div>
                 </div>

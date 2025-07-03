@@ -3,7 +3,7 @@ import './DataImport.css';
 import apiService from '../services/apiService';
 
 
-function DataImport({ onImportData, currentEntries, allEntries }) {
+function DataImport({ onImportData, currentEntries, allEntries, selectedProfile }) {
     const [isImporting, setIsImporting] = useState(false);
     const [isClearing, setIsClearing] = useState(false);
 
@@ -187,6 +187,11 @@ function DataImport({ onImportData, currentEntries, allEntries }) {
             return;
         }
 
+        if (!selectedProfile) {
+            alert('❌ No profile selected! Please select a profile first.');
+            return;
+          }
+
         const confirmText = `⚠️ DANGER: This will permanently delete ALL ${allEntries.length} entries (${realEntries.length} real + ${demoEntries.length} demo) from the database. This cannot be undone!\n\nType "DELETE ALL" to confirm:`;
         
         const userInput = window.prompt(confirmText);
@@ -202,7 +207,7 @@ function DataImport({ onImportData, currentEntries, allEntries }) {
             // Delete real entries from database
             if (realEntries.length > 0) {
                 await handleClearDemoData();
-                await apiService.clearAllEntries();
+                await apiService.clearAllEntries(selectedProfile);
             }
             
             // Clear all entries from frontend

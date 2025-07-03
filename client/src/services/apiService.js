@@ -132,7 +132,7 @@ class ApiService {
       params.append('user_id', selectedProfile.id);
       params.append('days', days.toString());
 
-      const response = await fetch(`${BASE_URL}/analytics/summary?${params.toString()}`, {
+      const response = await fetch(`${BASE_URL}/analytics/weekly-summary?${params.toString()}`, {
         headers: this.getAuthHeaders()
       });
       
@@ -228,7 +228,7 @@ class ApiService {
       date = new Date(dateString);
     } else {
       // Simple format like "2024-06-06"
-      date = new Date(dateString + 'T00:00:00');
+      date = new Date(dateString + 'T12:00:00');
     }
     
     console.log('📅 Created date object:', date);
