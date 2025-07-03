@@ -25,13 +25,14 @@ function App() {
 
 // Inner app content that uses authentication
 function AppContent() {
-  const { user, selectedProfile, getAuthToken, loading } = useAuth();
+  const { user, selectedProfile, setSelectedProfile, getAuthToken, loading } = useAuth();
 
   const [diaryText, setDiaryText] = useState(''); //what the user types
   const [diaryEntries, setDiaryEntries] = useState([]); //all the diary entries
   const [currentView, setCurrentView] = useState('home'); //track which view we are in: home, list, calendar, charts, analytics, dev-tools
   const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString()); //track which date we are looking at
   const [lastEntryTimestamp, setLastEntryTimestamp] = useState(Date.now());
+  const [listViewMode, setListViewMode] = useState('grid');
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -99,6 +100,12 @@ function AppContent() {
       setError('Failed to load diary entries. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSwitchProfile = () => {
+    if (window.confirm('Are you sure you want to switch profiles? Any unsaved changes will be lost.')) {
+      setSelectedProfile(null); // This will take user back to ProfileSelector
     }
   };
 
@@ -297,8 +304,17 @@ function AppContent() {
           </div>
         </div>
         <div className="profile-info-right">
+          <button 
+            className="switch-profile-btn"
+            onClick={handleSwitchProfile}
+            title="Switch to another family member"
+          >
+            Switch Profile
+          </button>
           <div className={`connection-status ${backendStatus}`}>
-            {backendStatus === 'connected' ? '🟢 Connected' : '🔴 Offline'}
+            {backendStatus === 'connected' ? '🟢 Connected' : 
+             backendStatus === 'checking' ? '🟡 Connecting...' : 
+             '🔴 Disconnected'}
           </div>
         </div>
       </div>
@@ -439,18 +455,54 @@ function AppContent() {
               )}
 
               {/* List View Content */}
+            {/* List View Content with list/grid toggle */}
               {currentView === 'list' && (
-                <div className="entries-section">
+                <div className={`entries-section ${listViewMode === 'grid' ? 'horizontal' : ''}`}>
+                  
+                  {/* View mode toggle */}
+                  <div className="list-view-toggle">
+                    <button
+                      className={`list-toggle-btn ${listViewMode === 'list' ? 'active' : ''}`}
+                      onClick={() => setListViewMode('list')}
+                    >
+                      📋 List View
+                    </button>
+                    <button
+                      className={`list-toggle-btn ${listViewMode === 'grid' ? 'active' : ''}`}
+                      onClick={() => setListViewMode('grid')}
+                    >
+                      🔲 Grid View
+                    </button>
+                  </div>
+
                   <h3>Your Recent Entries ({diaryEntries.length} total)</h3>
-                  {diaryEntries.map((entry) => (
-                    <DiaryEntry 
-                      key={entry.id}
-                      entry={entry}
-                      deleteEntry={handleDeleteEntry}
-                      onDelete={handleDeleteEntry}
-                      isLoading={isLoading}
-                    />
-                  ))}
+
+                  {/* Grid layout */}
+                  {listViewMode === 'grid' && (
+                    <div className="entries-horizontal-container">
+                      {diaryEntries.map((entry) => (
+                        <DiaryEntry 
+                          key={entry.id}
+                          entry={entry}
+                          deleteEntry={handleDeleteEntry} 
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Traditional list layout (vertical) */}
+                  {listViewMode === 'list' && (
+                    <div className="entries-vertical-container">
+                      {diaryEntries.map((entry) => (
+                        <DiaryEntry 
+                          key={entry.id}
+                          entry={entry}
+                          deleteEntry={handleDeleteEntry}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  
                 </div>
               )}
             </>

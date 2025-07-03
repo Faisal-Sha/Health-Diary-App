@@ -109,9 +109,12 @@
   
   .profiles-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 24px;
     margin-bottom: 32px;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
   }
   
   .profile-card {
@@ -160,7 +163,7 @@
     width: 80px;
     height: 80px;
     border-radius: 20px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    
     display: flex;
     align-items: center;
     justify-content: center;

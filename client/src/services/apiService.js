@@ -300,13 +300,18 @@ class ApiService {
   }
 
   // Clear ALL entries (use with extreme caution!)
-  async clearAllEntries() {
+  async clearAllEntries(selectedProfile) {
     try {
-      console.log('🚨 Clearing ALL entries...');
+      if (!selectedProfile) {
+        throw new Error('No profile selected');
+      }
+
+      console.log(`🚨 Clearing ALL entries for ${selectedProfile.name}...`);
       
       const response = await fetch(`${BASE_URL}/entries/clear-all`, {
         method: 'DELETE',
-        headers: this.getAuthHeaders()
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ user_id: selectedProfile.id })
       });
 
       const result = await this.handleResponse(response);
@@ -326,9 +331,7 @@ class ApiService {
       
       const response = await fetch(`${BASE_URL}/entries/bulk-delete`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({ entry_ids: entryIds })
       });
 

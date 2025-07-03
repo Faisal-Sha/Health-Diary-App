@@ -1086,18 +1086,24 @@ def test_analytics():
 
 
 @app.route('/api/entries/bulk-import', methods=['POST'])
+@jwt_required()
 def bulk_import_entries():
     """
     Process massive amounts of diary text - split it into individual entries,
     extract dates, process each with AI, and save to database
     """
     try:
+        family_id = get_jwt_identity()
+
         data = request.get_json()
         bulk_text = data.get('text', '')
-        user_id = data.get('user_id', 1)
+        user_id = data.get('user_id')
         
         if not bulk_text.strip():
             return jsonify({"error": "No text provided for bulk import"}), 400
+        
+        if not user_id:
+            return jsonify({"error": "User ID is required"}), 400
         
         print(f"🚀 Starting bulk import processing...")
         print(f"📄 Text length: {len(bulk_text)} characters")
@@ -1399,17 +1405,39 @@ def parse_flexible_date(date_str):
     return fallback
 
 @app.route('/api/entries/<int:entry_id>', methods=['DELETE'])
+@jwt_required()
 def delete_entry(entry_id):
     """
     Delete a specific diary entry and its associated health metrics
     """
     try:
+        family_id = get_jwt_identity()
+
         conn = get_db_connection()
         if not conn:
             return jsonify({"error": "Database connection failed"}), 500
         
         try:
             cursor = conn.cursor()
+
+            cursor.execute("""
+                SELECT re.id, re.user_id, u.display_name, u.family_id
+                FROM raw_entries re
+                JOIN users u ON re.user_id = u.id
+                WHERE re.id = %s AND u.family_id = %s
+            """, (entry_id, family_id))
+
+            entry = cursor.fetchone()
+            if not entry:
+                return jsonify({
+                    "success": False,
+                    "error": "Entry not found or you don't have permission to delete it"
+                }), 404
+            
+            user_id = entry['user_id']
+            user_name = entry['display_name']
+            
+            print(f"🗑️ Deleting entry {entry_id} for user {user_name} (ID: {user_id})")
             
             # First, delete associated health metrics
             cursor.execute("""
@@ -1421,7 +1449,7 @@ def delete_entry(entry_id):
             cursor.execute("""
                 DELETE FROM raw_entries 
                 WHERE id = %s AND user_id = %s
-            """, (entry_id, 1))  # user_id=1 for now
+            """, (entry_id,))  
             
             # Check if entry was actually deleted
             if cursor.rowcount == 0:
@@ -1449,11 +1477,20 @@ def delete_entry(entry_id):
         }), 500
 
 @app.route('/api/entries/clear-all', methods=['DELETE'])
+@jwt_required()
 def clear_all_entries():
     """
     Delete ALL entries for a user (use with caution!)
     """
     try:
+        family_id = get_jwt_identity()
+
+        data = request.get_json()
+        user_id = data.get('user_id')
+
+        if not user_id:
+            return jsonify({"error": "User ID is required"}), 400
+        
         conn = get_db_connection()
         if not conn:
             return jsonify({"error": "Database connection failed"}), 500
@@ -1461,17 +1498,29 @@ def clear_all_entries():
         try:
             cursor = conn.cursor()
             
+            cursor.execute("""
+                SELECT id, display_name FROM users 
+                WHERE id = %s AND family_id = %s
+            """, (user_id, family_id))
+
+            user = cursor.fetchone()
+            if not user:
+                return jsonify({"error": "User not found or access denied"}), 403
+            
+            user_name = user['display_name']
+            print(f"🗑️ Clearing ALL entries for user {user_name} (ID: {user_id})")
+
             # Delete all health metrics for this user
             cursor.execute("""
                 DELETE FROM health_metrics 
                 WHERE user_id = %s
-            """, (1,))  # user_id=1 for now
+            """, (user_id,))  # user_id=1 for now
             
             # Delete all raw entries for this user
             cursor.execute("""
                 DELETE FROM raw_entries 
                 WHERE user_id = %s
-            """, (1,))
+            """, (user_id,))
             
             deleted_count = cursor.rowcount
             conn.commit()
@@ -1495,11 +1544,13 @@ def clear_all_entries():
 
 
 @app.route('/api/entries/bulk-delete', methods=['DELETE'])
+@jwt_required()
 def bulk_delete_entries():
     """
     Delete multiple entries by IDs
     """
     try:
+        family_id = get_jwt_identity()
         data = request.get_json()
         entry_ids = data.get('entry_ids', [])
         
@@ -1518,6 +1569,30 @@ def bulk_delete_entries():
             
             # Convert entry_ids to proper format for SQL
             id_placeholders = ','.join(['%s'] * len(entry_ids))
+            cursor.execute(f"""
+                SELECT re.id, u.family_id
+                FROM raw_entries re
+                JOIN users u ON re.user_id = u.id
+                WHERE re.id IN ({id_placeholders})
+            """, entry_ids)
+            
+            found_entries = cursor.fetchall()
+            
+            # Check if all entries belong to the authenticated family
+            unauthorized_entries = [e for e in found_entries if e['family_id'] != family_id]
+            if unauthorized_entries:
+                return jsonify({
+                    "success": False,
+                    "error": "Some entries don't belong to your family"
+                }), 403
+            
+            if len(found_entries) != len(entry_ids):
+                return jsonify({
+                    "success": False,
+                    "error": "Some entries were not found"
+                }), 404
+            
+            print(f"🗑️ Bulk deleting {len(entry_ids)} entries for family {family_id}")
             
             # Delete associated health metrics
             cursor.execute(f"""

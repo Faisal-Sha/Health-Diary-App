@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AddProfileModal from './AddProfileModal';
+import ManageProfileModals from './ManageProfileModals';
 import './ProfileSelector.css';
 
 const ProfileSelector = () => {
@@ -8,6 +9,7 @@ const ProfileSelector = () => {
   const [familyProfiles, setFamilyProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddProfile, setShowAddProfile] = useState(false);
+  const [showManageProfiles, setShowManageProfiles] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -158,9 +160,28 @@ const ProfileSelector = () => {
   };
 
   const handleManageProfiles = () => {
-    // This would open a profile management interface
-    alert('Profile management interface would open here! You can implement this to edit existing profiles.');
+    setShowManageProfiles(true);
   };
+
+  const handleProfileUpdated = (updatedProfile) => {
+    setFamilyProfiles(profiles => 
+      profiles.map(profile => 
+        profile.id === updatedProfile.id 
+          ? { ...profile, ...updatedProfile }
+          : profile
+      )
+    );
+  };
+
+  const handleProfileDeleted = (deletedProfileId) => {
+    setFamilyProfiles(profiles => 
+      profiles.filter(profile => profile.id !== deletedProfileId)
+    );
+
+    if (selectedProfile && selectedProfile.id === deletedProfileId) {
+        setSelectedProfile(null);
+    }
+    };
 
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to sign out?')) {
@@ -311,6 +332,15 @@ const ProfileSelector = () => {
             onClose={() => setShowAddProfile(false)}
             onProfileAdded={handleProfileAdded}
           />
+        )}
+
+        {showManageProfiles && (
+            <ManageProfileModals
+                onClose={() => setShowManageProfiles(false)}
+                profiles={familyProfiles}
+                onProfileUpdated={handleProfileUpdated}
+                onProfileDeleted={handleProfileDeleted}
+            />
         )}
       </div>
     </div>

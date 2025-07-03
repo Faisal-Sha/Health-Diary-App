@@ -4,7 +4,7 @@ import BulkTextImport from './BulkTextImport';
 import FileImport from './FileImport';
 import './DeveloperTools.css';
 
-function DeveloperTools({ onImportData, currentEntries, allEntries, onDataImported }) {
+function DeveloperTools({ onImportData, currentEntries, allEntries, onDataImported, selectedProfile }) {
     const handleAnalyzeDataQuality = () => {
         if (currentEntries === 0) {
             alert('No data to analyze. Import some entries first!');
@@ -90,7 +90,7 @@ function DeveloperTools({ onImportData, currentEntries, allEntries, onDataImport
                         </p>
                     </div>
                     <div className="tool-content">
-                        <BulkTextImport onImportComplete={onDataImported} />
+                        <BulkTextImport onImportComplete={onDataImported} selectedProfile={selectedProfile}/>
                     </div>
                 </div>
 

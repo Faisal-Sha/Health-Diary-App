@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import './BulkTextImport.css';
 
 
-function BulkTextImport({ onImportComplete }) {
+function BulkTextImport({ onImportComplete, selectedProfile }) {
+    const { authenticatedFetch } = useAuth();
     const [bulkText, setBulkText] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
     const [showBulkMode, setShowBulkMode] = useState(false);
@@ -10,6 +12,11 @@ function BulkTextImport({ onImportComplete }) {
     const handleBulkImport = async () => {
         if (!bulkText.trim()) {
             alert("Please enter some diary text to import!");
+            return;
+        }
+
+        if (!selectedProfile) {
+            alert("Please select a profile first!");
             return;
         }
 
@@ -22,14 +29,11 @@ function BulkTextImport({ onImportComplete }) {
         try {
             console.log('🚀 Starting bulk text import...');
             
-            const response = await fetch('http://localhost:5001/api/entries/bulk-import', {
+            const response = await authenticatedFetch('http://localhost:5001/api/entries/bulk-import', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
                 body: JSON.stringify({ 
                     text: bulkText,
-                    user_id: 1 
+                    user_id: selectedProfile.id  
                 })
             });
 
@@ -77,6 +81,18 @@ Average day overall. Sleep was okay at 6.5 hours. Pain sitting around 4/10 - man
 
 January 18th, 2024
 Excellent sleep last night - 9 hours! Woke up naturally without alarm. No pain today, feeling fantastic. High energy, very positive mood. Great day overall.`;
+    if (!selectedProfile) {
+        return (
+            <div className="bulk-import-container">
+                <div className="bulk-import-header">
+                    <h3 className="bulk-import-title">📥 Bulk Text Import</h3>
+                    <p className="bulk-import-subtitle" style={{color: '#e74c3c'}}>
+                        ⚠️ Please select a profile first to use bulk import
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     if (!showBulkMode) {
         return (
@@ -142,7 +158,7 @@ Excellent sleep last night - 9 hours! Woke up naturally without alarm. No pain t
                     <li>Automatically detects dates in your text</li>
                     <li>Splits text into individual diary entries</li>
                     <li>Extracts mood, pain, sleep, stress levels from each entry</li>
-                    <li>Saves everything to database for analysis</li>
+                    <li>Saves everything to database for {selectedProfile.name}</li>
                 </ul>
             </div>
 

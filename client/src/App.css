@@ -425,11 +425,13 @@ p {
 .profile-info-bar {
   background: linear-gradient(135deg, #325eb5 0%, #4aa7dc 100%); /* Match your HeroSection colors */
   color: white;
-  padding: 10px 20px;
+  padding: 10px 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 2px 10px rgba(50, 94, 181, 0.3);
+  margin-bottom: 50px;
+  border-radius: 20px;
 }
 
 .profile-info-left {
@@ -439,7 +441,17 @@ p {
 }
 
 .profile-avatar {
-  font-size: 1.5rem;
+    font-size: 1.5rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
 .profile-details {
@@ -645,4 +657,312 @@ p {
     width: 200px;
     text-align: center;
   }
+}
+
+.switch-profile-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  backdrop-filter: blur(10px);
+}
+
+.switch-profile-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.switch-profile-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Update profile-info-right to handle the new button */
+.profile-info-right {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+/* Responsive adjustments for the switch profile button */
+@media (max-width: 768px) {
+  .switch-profile-btn {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-info-bar {
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 15px;
+  }
+  
+  .profile-info-left {
+    justify-content: center;
+  }
+  
+  .profile-info-right {
+    justify-content: center;
+    gap: 10px;
+  }
+  
+  .switch-profile-btn {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+  }
+}
+
+
+
+/* Fixed List View: 
+.entries-section.horizontal {
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.entries-section.horizontal h3 {
+  color: #2c3e50;
+  margin-bottom: 30px;
+  text-align: center;
+  font-size: 1.5rem;
+}
+
+/* GRID CONTAINER - No horizontal scrolling */
+.entries-horizontal-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  padding: 20px 0;
+}
+
+/* Individual diary entry in grid layout */
+.diary-entry.horizontal {
+  background: white;
+  border-radius: 15px;
+  padding: 25px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #3498db;
+  transition: all 0.3s ease;
+  height: fit-content;
+  position: relative;
+  width: 100%;
+}
+
+.diary-entry.horizontal:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Entry header in grid layout */
+.diary-entry.horizontal .entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+  font-size: 0.9em;
+  color: #7f8c8d;
+}
+
+.diary-entry.horizontal .entry-date-time {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.diary-entry.horizontal .entry-date {
+  font-weight: bold;
+  color: #2c3e50;
+  font-size: 1rem;
+}
+
+.diary-entry.horizontal .entry-time {
+  font-size: 0.8em;
+  color: #95a5a6;
+}
+
+/* Entry text in grid layout */
+.diary-entry.horizontal .entry-text {
+  color: #2c3e50;
+  line-height: 1.6;
+  font-size: 1rem;
+  margin-bottom: 15px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+/* Tags in grid layout */
+.diary-entry.horizontal .entry-tags {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.diary-entry.horizontal .mood-tag,
+.diary-entry.horizontal .symptoms-tag {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8em;
+  font-weight: bold;
+  text-align: center;
+}
+
+/* AI confidence in grid layout */
+.diary-entry.horizontal .ai-confidence {
+  position: absolute;
+  bottom: 10px;
+  right: 15px;
+  font-size: 0.7em;
+  color: #8e44ad;
+  font-weight: bold;
+}
+
+/* Delete button in grid layout */
+.diary-entry.horizontal .delete-button {
+  background: none;
+  border: none;
+  font-size: 1.2em;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  color: #e74c3c;
+  position: absolute;
+  top: 15px;
+  right: 15px;
+}
+
+.diary-entry.horizontal .delete-button:hover {
+  background-color: #fadbd8;
+  transform: scale(1.1);
+}
+
+/* ========================================= */
+/* RESPONSIVE GRID BEHAVIOR */
+/* ========================================= */
+
+/* Large screens: 3-4 columns */
+@media (min-width: 1200px) {
+  .entries-horizontal-container {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+}
+
+/* Medium screens: 2-3 columns */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .entries-horizontal-container {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+}
+
+/* Small tablets: 2 columns */
+@media (min-width: 600px) and (max-width: 767px) {
+  .entries-horizontal-container {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+  }
+  
+  .diary-entry.horizontal {
+    padding: 20px;
+  }
+}
+
+/* Mobile: 1 column */
+@media (max-width: 599px) {
+  .entries-horizontal-container {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .diary-entry.horizontal {
+    padding: 20px;
+  }
+  
+  .entries-section.horizontal {
+    padding: 15px;
+  }
+}
+
+/* ========================================= */
+/* VIEW TOGGLE BUTTON FOR LIST/GRID */
+/* ========================================= */
+
+.list-view-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.list-toggle-btn {
+  padding: 8px 16px;
+  border: 2px solid #3498db;
+  background: white;
+  color: #3498db;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.list-toggle-btn:hover {
+  background: #ecf0f1;
+  transform: translateY(-2px);
+}
+
+.list-toggle-btn.active {
+  background: #3498db;
+  color: white;
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+}
+
+/* ========================================= */
+/* GRID DENSITY OPTIONS (OPTIONAL) */
+/* ========================================= */
+
+/* Compact grid - smaller cards, more columns */
+.entries-horizontal-container.compact {
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 15px;
+}
+
+.entries-horizontal-container.compact .diary-entry.horizontal {
+  padding: 20px;
+}
+
+.entries-horizontal-container.compact .diary-entry.horizontal .entry-text {
+  max-height: 100px;
+  font-size: 0.9rem;
+}
+
+/* Spacious grid - larger cards, fewer columns */
+.entries-horizontal-container.spacious {
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 25px;
+}
+
+.entries-horizontal-container.spacious .diary-entry.horizontal {
+  padding: 30px;
+}
+
+.entries-horizontal-container.spacious .diary-entry.horizontal .entry-text {
+  max-height: 150px;
+  font-size: 1.1rem;
 }
