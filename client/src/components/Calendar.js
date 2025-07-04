@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import "./Calendar.css";
 import DiaryEntry from "./DiaryEntry.js";
 
-function Calendar({getDatesWithEntries, getEntriesForDate, selectedDate, setSelectedDate, handleDeleteEntry}) {
+function Calendar({getDatesWithEntries, getEntriesForDate, selectedDate, setSelectedDate, handleDeleteEntry, onEntryUpdated}) {
 
     // State for current month/year being viewed
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -256,6 +256,7 @@ function Calendar({getDatesWithEntries, getEntriesForDate, selectedDate, setSele
                                 key={entry.id}
                                 entry={entry}
                                 deleteEntry={handleDeleteEntry}
+                                onEntryUpdated={onEntryUpdated}
                             />
                         ))}
                     </div>

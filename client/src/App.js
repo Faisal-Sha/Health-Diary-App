@@ -164,6 +164,18 @@ function AppContent() {
     }
   };
 
+  const handleEntryUpdated = (updatedEntry) => {
+    console.log('📝 Entry updated:', updatedEntry.id);
+    
+    // Update the entry in our local state
+    setDiaryEntries(diaryEntries.map(entry => 
+      entry.id === updatedEntry.id ? updatedEntry : entry
+    ));
+    
+    // Update timestamp to refresh any dependent components
+    setLastEntryTimestamp(Date.now());
+  };
+
   // Deleting entries
   const handleDeleteEntry = async (entryId) => {
     if (!selectedProfile) {
@@ -461,6 +473,7 @@ function AppContent() {
                   setSelectedDate={setSelectedDate}
                   handleDeleteEntry={handleDeleteEntry}
                   selectedProfile={selectedProfile}
+                  onEntryUpdated={handleEntryUpdated}
                 />
               )}
 
@@ -515,6 +528,7 @@ function AppContent() {
                         entry={entry}
                         deleteEntry={handleDeleteEntry}
                         viewMode="grid"
+                        onEntryUpdated={handleEntryUpdated}
                       />
                     </div>
                   ))}
@@ -530,6 +544,7 @@ function AppContent() {
                           entry={entry}
                           deleteEntry={handleDeleteEntry}
                           viewMode="list"
+                          onEntryUpdated={handleEntryUpdated}
                         />
                       ))}
                     </div>

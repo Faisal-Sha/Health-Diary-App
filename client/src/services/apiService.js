@@ -279,6 +279,27 @@ class ApiService {
     return symptoms;
   }
 
+
+  async updateEntry(entryId, newText) {
+    try {
+      console.log(`✏️ Updating entry ${entryId}...`);
+      
+      const response = await fetch(`${BASE_URL}/entries/${entryId}`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ text: newText })
+      });
+  
+      const result = await this.handleResponse(response);
+      console.log('✅ Entry updated successfully:', result);
+      return result;
+      
+    } catch (error) {
+      console.error('❌ Failed to update entry:', error);
+      throw error;
+    }
+  }
+  
   // Delete a specific entry
   async deleteEntry(entryId) {
     try {
