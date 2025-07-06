@@ -244,11 +244,38 @@ class ApiService {
   }
 
   // Map AI mood score (1-10) to your current mood categories
-  mapMoodScore(score) {
+  mapMoodScore(score) {  // ✅ FIXED: was "mapMoodSc"
     if (!score) return 'neutral';
     if (score >= 7) return 'positive';
     if (score <= 4) return 'negative';
     return 'neutral';
+  }
+  
+  // ADD this missing method that DiaryEntry is trying to call:
+  mapMoodFromScore(score) {  
+    // This is the same as mapMoodScore but with the name DiaryEntry expects
+    return this.mapMoodScore(score);
+  }
+  
+  // Update a specific entry - ADD this missing method
+  async updateEntry(entryId, newText) {
+    try {
+      console.log(`✏️ Updating entry ${entryId}...`);
+      
+      const response = await fetch(`${BASE_URL}/entries/${entryId}`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ text: newText })
+      });
+  
+      const result = await this.handleResponse(response);
+      console.log('✅ Entry updated successfully:', result);
+      return result;
+      
+    } catch (error) {
+      console.error('❌ Failed to update entry:', error);
+      throw error;
+    }
   }
 
   // Extract symptoms from AI data (enhanced)
@@ -299,7 +326,7 @@ class ApiService {
       throw error;
     }
   }
-  
+
   // Delete a specific entry
   async deleteEntry(entryId) {
     try {

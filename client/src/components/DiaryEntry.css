@@ -251,17 +251,4 @@
     transform: scale(1.1);
   }
   
-  /* Remove absolute positioning from delete button in horizontal layout */
-  .diary-entry.horizontal .delete-button {
-    position: static; /* Remove absolute positioning */
-  }
   
-  /* Update entry header to accommodate actions */
-  .diary-entry.horizontal .entry-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 15px;
-    font-size: 0.9em;
-    color: #7f8c8d;
-  }
