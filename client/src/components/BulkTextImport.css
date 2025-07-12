@@ -1,0 +1,431 @@
+/* Toggle Button (when collapsed) */
+.bulk-import-toggle {
+    text-align: center;
+    margin: 20px 0;
+    padding: 15px;
+    background: #e3f2fd;
+    border-radius: 10px;
+    border: 1px solid #2196f3;
+    transition: all 0.3s ease;
+}
+
+.bulk-import-toggle:hover {
+    background: #bbdefb;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
+}
+
+.toggle-bulk-btn {
+    background: #2196f3;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.toggle-bulk-btn:hover {
+    background: #1976d2;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+}
+
+.toggle-description {
+    margin: 10px 0 0 0;
+    font-size: 0.9rem;
+    color: #1976d2;
+    font-weight: 500;
+}
+
+/* Main Container (when expanded) */
+.bulk-import-container {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    margin: 20px 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 2px solid #2196f3;
+    position: relative;
+    overflow: hidden;
+}
+
+.bulk-import-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(33, 150, 243, 0.05), transparent);
+    transition: left 0.5s ease;
+}
+
+.bulk-import-container:hover::before {
+    left: 100%;
+}
+
+/* Header */
+.bulk-import-header {
+    text-align: center;
+    margin-bottom: 25px;
+    position: relative;
+    z-index: 2;
+}
+
+.bulk-import-title {
+    color: #2196f3;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0 0 10px 0;
+}
+
+.bulk-import-subtitle {
+    color: #6c757d;
+    font-size: 1rem;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Text Input Section */
+.bulk-input-section {
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 2;
+}
+
+.bulk-input-label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 1rem;
+}
+
+.bulk-textarea {
+    width: 100%;
+    height: 300px;
+    padding: 15px;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-family: inherit;
+    resize: vertical;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+    line-height: 1.5;
+}
+
+.bulk-textarea:focus {
+    outline: none;
+    border-color: #2196f3;
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.bulk-textarea.disabled {
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.character-count {
+    text-align: right;
+    margin-top: 5px;
+    font-size: 0.8rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+/* Example Section */
+.example-section {
+    margin-bottom: 20px;
+    text-align: left;
+    position: relative;
+    z-index: 2;
+}
+
+.example-btn {
+    background: #f8f9fa;
+    color: #6c757d;
+    border: 1px solid #dee2e6;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    margin-right: 10px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.example-btn:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+    transform: translateY(-1px);
+}
+
+.example-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.example-description {
+    font-size: 0.9rem;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* How It Works Section */
+.how-it-works {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 2;
+}
+
+.how-it-works-title {
+    color: #856404;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 10px 0;
+}
+
+.how-it-works-list {
+    color: #856404;
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    padding-left: 20px;
+}
+
+.how-it-works-list li {
+    margin-bottom: 5px;
+}
+
+.how-it-works-list li:last-child {
+    margin-bottom: 0;
+}
+
+/* Action Buttons */
+.bulk-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 2;
+}
+
+.bulk-action-btn {
+    padding: 12px 30px;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    min-width: 150px;
+}
+
+.bulk-action-btn.primary {
+    background: #28a745;
+    color: white;
+}
+
+.bulk-action-btn.primary:hover {
+    background: #218838;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.bulk-action-btn.secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.bulk-action-btn.secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+}
+
+.bulk-action-btn.disabled {
+    background: #adb5bd;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.bulk-action-btn.disabled:hover {
+    background: #adb5bd;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Processing Status */
+.processing-status {
+    text-align: center;
+    padding: 20px;
+    background: #e3f2fd;
+    border-radius: 8px;
+    border: 1px solid #2196f3;
+    position: relative;
+    z-index: 2;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+.processing-title {
+    margin: 0 0 5px 0;
+    color: #1976d2;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.processing-subtitle {
+    margin: 0;
+    color: #1976d2;
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+/* Loading Animation */
+.processing-status::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(33, 150, 243, 0.2), transparent);
+    animation: loading 2s infinite;
+}
+
+@keyframes loading {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .bulk-import-container {
+        padding: 20px;
+        margin: 15px 0;
+    }
+    
+    .bulk-import-title {
+        font-size: 1.2rem;
+    }
+    
+    .bulk-textarea {
+        height: 250px;
+    }
+    
+    .bulk-actions {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .bulk-action-btn {
+        width: 100%;
+        max-width: 250px;
+    }
+    
+    .example-section {
+        text-align: center;
+    }
+    
+    .example-btn {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .bulk-import-title {
+        font-size: 1.1rem;
+    }
+    
+    .bulk-import-subtitle {
+        font-size: 0.9rem;
+    }
+    
+    .bulk-textarea {
+        height: 200px;
+        padding: 12px;
+    }
+    
+    .how-it-works {
+        padding: 12px;
+    }
+    
+    .processing-status {
+        padding: 15px;
+    }
+}
+
+/* Accessibility */
+.bulk-action-btn:focus,
+.example-btn:focus,
+.toggle-bulk-btn:focus {
+    outline: 2px solid #2196f3;
+    outline-offset: 2px;
+}
+
+.bulk-textarea:focus {
+    outline: none;
+    border-color: #2196f3;
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .bulk-import-container {
+        border-width: 3px;
+    }
+    
+    .bulk-textarea {
+        border-width: 2px;
+    }
+    
+    .bulk-action-btn {
+        border: 2px solid transparent;
+    }
+    
+    .bulk-action-btn.primary {
+        border-color: #28a745;
+    }
+    
+    .bulk-action-btn.secondary {
+        border-color: #6c757d;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .bulk-import-container::before,
+    .processing-status::before {
+        animation: none;
+    }
+    
+    .processing-status {
+        animation: none;
+    }
+    
+    .bulk-action-btn,
+    .example-btn,
+    .toggle-bulk-btn {
+        transition: none;
+    }
+}

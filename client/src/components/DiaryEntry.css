@@ -1,0 +1,254 @@
+.diary-entry {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid #3498db;
+  }
+  
+  .entry-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 0.9em;
+    color: #7f8c8d;
+  }
+  
+  .entry-date {
+    font-weight: bold;
+  }
+  
+  .entry-text {
+    color: #2c3e50;
+    line-height: 1.5;
+    font-size: 1em;
+  }
+  
+  .delete-button {
+    background: none;
+    border: none;
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+  }
+  
+  .delete-button:hover {
+    background-color: #adadad;
+  }
+  
+  .entry-text {
+    color: #2c3e50;
+    line-height: 1.5;
+    font-size: 1em;
+  }
+
+  .entry-tags {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  
+  .mood-tag, .symptoms-tag {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+    text-align: center;
+  }
+  
+  .mood-positive {
+    background-color: #d5f4e6;
+    color: #27ae60;
+  }
+  
+  .mood-negative {
+    background-color: #fadbd8;
+    color: #e74c3c;
+  }
+  
+  .mood-neutral {
+    background-color: #ebf3fd;
+    color: #3498db;
+  }
+  
+  .symptoms-tag {
+    background-color: #fff3cd;
+    color: #856404;
+  }
+  
+  .entry-date-time {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .entry-date {
+    font-weight: bold;
+  }
+  
+  .entry-time {
+    font-size: 0.8em;
+    color: #95a5a6;
+  }
+  
+  .ai-confidence {
+    font-size: 0.7em;
+    color: #8e44ad;
+    font-weight: bold;
+  }
+
+  .entry-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  
+  /* Edit button styling */
+  .edit-button {
+    background: none;
+    border: none;
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    color: #3498db;
+  }
+  
+  .edit-button:hover {
+    background-color: #e3f2fd;
+    transform: scale(1.1);
+  }
+  
+  /* Save edit button */
+  .save-edit-button {
+    background: none;
+    border: none;
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    color: #27ae60;
+  }
+  
+  .save-edit-button:hover {
+    background-color: #e8f5e8;
+    transform: scale(1.1);
+  }
+  
+  /* Cancel edit button */
+  .cancel-edit-button {
+    background: none;
+    border: none;
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    color: #e74c3c;
+  }
+  
+  .cancel-edit-button:hover {
+    background-color: #fadbd8;
+    transform: scale(1.1);
+  }
+  
+  /* Entry in editing mode */
+  .diary-entry.editing {
+    border: 2px solid #3498db;
+    background: #f8f9fa;
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.2);
+  }
+  
+  /* Edit section container */
+  .entry-edit-section {
+    margin: 15px 0;
+  }
+  
+  /* Edit textarea */
+  .entry-edit-textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 15px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 1rem;
+    line-height: 1.6;
+    resize: vertical;
+    transition: all 0.3s ease;
+    background: white;
+    color: #2c3e50;
+  }
+  
+  .entry-edit-textarea:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+  }
+  
+  /* Character count */
+  .edit-char-count {
+    text-align: right;
+    font-size: 0.85em;
+    color: #7f8c8d;
+    margin-top: 5px;
+  }
+  
+  .edit-char-count .no-changes {
+    color: #95a5a6;
+    font-style: italic;
+  }
+  
+  /* ========================================= */
+  /* RESPONSIVE EDIT STYLES */
+  /* ========================================= */
+  
+  /* Mobile adjustments for edit mode */
+  @media (max-width: 768px) {
+    .entry-actions {
+      gap: 6px;
+    }
+    
+    .edit-button,
+    .save-edit-button,
+    .cancel-edit-button,
+    .delete-button {
+      font-size: 1.1em;
+      padding: 6px;
+    }
+    
+    .entry-edit-textarea {
+      min-height: 100px;
+      padding: 12px;
+      font-size: 0.95rem;
+    }
+  }
+  
+  /* ========================================= */
+  /* EXISTING STYLES UPDATES */
+  /* ========================================= */
+  
+  /* Update existing delete button to work with new actions container */
+  .delete-button {
+    background: none;
+    border: none;
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    color: #e74c3c;
+  }
+  
+  .delete-button:hover {
+    background-color: #fadbd8;
+    transform: scale(1.1);
+  }
+  
+  

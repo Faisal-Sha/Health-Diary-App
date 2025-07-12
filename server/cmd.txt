@@ -1,0 +1,5 @@
+docker run -it -d --rm -p 5000:5000 backend-health:1.0 
+
+docker build -t backend-health:1.0 .
+
+docker buildx build --platform linux/amd64 -t sakjin/health-diary:latest --push .
