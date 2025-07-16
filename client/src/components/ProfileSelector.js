@@ -11,6 +11,7 @@ const ProfileSelector = () => {
   const [showAddProfile, setShowAddProfile] = useState(false);
   const [showManageProfiles, setShowManageProfiles] = useState(false);
   const [error, setError] = useState(null);
+  const BASE_URL = process.env.REACT_APP_API_URL;
 
   useEffect(() => {
     loadFamilyProfiles();
@@ -119,7 +120,7 @@ const ProfileSelector = () => {
   const loadFamilyProfiles = async () => {
     try {
       setError(null);
-      const response = await authenticatedFetch('http://localhost:5001/api/family/profiles');
+      const response = await authenticatedFetch(`${BASE_URL}/family/profiles`);
       
       if (response.ok) {
         const profiles = await response.json();

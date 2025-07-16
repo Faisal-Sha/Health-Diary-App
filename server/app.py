@@ -11,47 +11,64 @@ from analytics_engine import HealthAnalyticsEngine
 import re
 from datetime import datetime, timedelta
 from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
-from datetime import timedelta
 
-
-from auth_routes import register_auth_routes
-from family_routes import register_family_routes
-
+# Import extensions
+from extensions import db, migrate
 
 # Load environment variables from .env file
 load_dotenv()
 
-app = Flask(__name__)
-
-CORS(app, origins=["http://localhost:3000"])  # Allow React frontend to connect
-
 # Database configuration
-DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://username:password@localhost/health_app')
+DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@db/health_app')
+# OpenAI configuration
+openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
-app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
-app.config['JWT_ALGORITHM'] = 'HS256'
+def create_app():
+    app = Flask(__name__)
 
-jwt = JWTManager(app)
+    CORS(app, resources={r"/*": {"origins": "*"}})  # Allow requests from any origin
 
-# JWT error handlers
-@jwt.expired_token_loader
-def expired_token_callback(jwt_header, jwt_payload):
-    return jsonify({'error': 'Token has expired'}), 401
+    # Configure SQLAlchemy
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-@jwt.invalid_token_loader
-def invalid_token_callback(error):
-    print(f"❌ Invalid token error: {error}")
-    return jsonify({'error': 'Invalid token'}), 422
+    # Initialize extensions
+    db.init_app(app)
+    migrate.init_app(app, db)
 
-@jwt.unauthorized_loader
-def missing_token_callback(error):
-    print(f"❌ Missing token error: {error}")
-    return jsonify({'error': 'Authorization token is required'}), 401
+    # JWT Configuration
+    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
+    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
+    app.config['JWT_ALGORITHM'] = 'HS256'
 
+    jwt = JWTManager(app)
 
-register_auth_routes(app)
-register_family_routes(app)
+    # JWT error handlers
+    @jwt.expired_token_loader
+    def expired_token_callback(jwt_header, jwt_payload):
+        return jsonify({'error': 'Token has expired'}), 401
+
+    @jwt.invalid_token_loader
+    def invalid_token_callback(error):
+        print(f"❌ Invalid token error: {error}")
+        return jsonify({'error': 'Invalid token'}), 422
+
+    @jwt.unauthorized_loader
+    def missing_token_callback(error):
+        print(f"❌ Missing token error: {error}")
+        return jsonify({'error': 'Authorization token is required'}), 401
+
+    # Register blueprints
+    from auth_routes import register_auth_routes
+    from family_routes import register_family_routes
+    
+    register_auth_routes(app)
+    register_family_routes(app)
+
+    return app
+
+app = create_app()
+
 
 @app.route('/api/test-auth', methods=['GET'])
 @jwt_required()
@@ -64,9 +81,6 @@ def test_auth():
     })
 
 
-# OpenAI configuration
-openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-
 analytics_engine = HealthAnalyticsEngine(
     database_url=DATABASE_URL,
     openai_api_key=os.getenv('OPENAI_API_KEY')
@@ -75,7 +89,7 @@ analytics_engine = HealthAnalyticsEngine(
 def get_db_connection():
     """Create database connection"""
     try:
-        conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+        conn = MongoClient(DATABASE_URL)
         return conn
     except Exception as e:
         print(f"Database connection error: {e}")
@@ -668,86 +682,6 @@ If information is not mentioned or unclear, use null for numbers and empty array
     return base_prompt
 
 
-def get_temporal_context(user_id, current_entry_date=None, days_back=3):
-    """Get recent entries for temporal context analysis"""
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return []
-        
-        cursor = conn.cursor()
-        
-        # Handle date conversion
-        if current_entry_date is None:
-            current_entry_date = datetime.now().date()
-        elif isinstance(current_entry_date, str):
-            current_entry_date = datetime.fromisoformat(current_entry_date).date()
-        
-        # Get entries from the last few days (excluding current date)
-        start_date = current_entry_date - timedelta(days=days_back)
-        end_date = current_entry_date
-        
-        query = """
-            SELECT 
-                re.entry_date,
-                re.entry_text,
-                hm.mood_score,
-                hm.energy_level,
-                hm.pain_level,
-                hm.sleep_hours,
-                hm.stress_level
-            FROM raw_entries re
-            LEFT JOIN health_metrics hm ON re.id = hm.raw_entry_id
-            WHERE re.user_id = %s 
-            AND re.entry_date >= %s 
-            AND re.entry_date < %s
-            ORDER BY re.entry_date DESC
-        """
-        
-        cursor.execute(query, (user_id, start_date, end_date))
-        results = cursor.fetchall()
-        
-        return [dict(row) for row in results]
-        
-    except Exception as e:
-        print(f"Error getting temporal context: {e}")
-        return []
-    finally:
-        if 'conn' in locals():
-            conn.close()
-
-
-def format_temporal_context(temporal_data):
-    """Format temporal context for AI prompt"""
-    if not temporal_data:
-        return "No recent entries available for temporal analysis."
-    
-    formatted_context = "RECENT HEALTH HISTORY (for delayed effect analysis):\n"
-    
-    for entry in temporal_data:
-        date = entry['entry_date']
-        text = entry['entry_text']
-        
-        # Add health metrics if available
-        metrics = []
-        if entry.get('mood_score'):
-            metrics.append(f"mood: {entry['mood_score']}/10")
-        if entry.get('energy_level'):
-            metrics.append(f"energy: {entry['energy_level']}/10")
-        if entry.get('pain_level'):
-            metrics.append(f"pain: {entry['pain_level']}/10")
-        if entry.get('sleep_hours'):
-            metrics.append(f"sleep: {entry['sleep_hours']}hrs")
-        if entry.get('stress_level'):
-            metrics.append(f"stress: {entry['stress_level']}/10")
-        
-        metrics_str = f" [{', '.join(metrics)}]" if metrics else ""
-        
-        formatted_context += f"\n{date}{metrics_str}:\n{text[:200]}{'...' if len(text) > 200 else ''}\n"
-    
-    return formatted_context
-
-
 def get_enhanced_fallback_data():
     """Enhanced fallback data with all analysis structures"""
     return {
@@ -1048,8 +982,6 @@ def get_health_trends():
             "success": False,
             "error": "Failed to analyze trends"
         }), 500
-    
-
 
 @app.route('/api/analytics/test', methods=['GET'])
 def test_analytics():
@@ -1083,8 +1015,6 @@ def test_analytics():
         return jsonify({
             "error": f"Analytics test failed: {str(e)}"
         }), 500
-
-
 
 @app.route('/api/entries/bulk-import', methods=['POST'])
 @jwt_required()
@@ -1289,64 +1219,6 @@ def split_bulk_text_into_entries(bulk_text):
         for i, entry in enumerate(entries):
             print(f"  Entry {i+1}: {entry['date']} - {len(entry['text'])} chars")
             print(f"    Preview: {entry['text'][:100]}...")
-    
-    return entries
-
-
-
-def split_by_paragraphs_or_length(bulk_text):
-    """
-    Fallback splitting when no dates are found
-    Split by double line breaks or every ~3-5 lines
-    """
-    entries = []
-    
-    # Try splitting by double line breaks first (paragraph breaks)
-    paragraphs = re.split(r'\n\s*\n', bulk_text)
-    
-    if len(paragraphs) > 1:
-        # Use paragraph breaks
-        base_date = datetime.now().date()
-        for i, paragraph in enumerate(paragraphs):
-            if paragraph.strip() and len(paragraph.strip()) > 20:
-                # Space entries out by days
-                entry_date = base_date - timedelta(days=len(paragraphs) - i - 1)
-                entries.append({
-                    'text': paragraph.strip(),
-                    'date': entry_date
-                })
-    else:
-        # Split by line count (every 3-5 lines becomes an entry)
-        lines = [line.strip() for line in bulk_text.split('\n') if line.strip()]
-        current_entry = ""
-        line_count = 0
-        base_date = datetime.now().date()
-        entry_number = 0
-        
-        for line in lines:
-            current_entry += line + "\n"
-            line_count += 1
-            
-            # Create entry every 3-5 lines or if we hit a natural break
-            if line_count >= 3 and (line_count >= 5 or line.endswith('.') or line.endswith('!')):
-                if len(current_entry.strip()) > 20:
-                    entry_date = base_date - timedelta(days=entry_number)
-                    entries.append({
-                        'text': current_entry.strip(),
-                        'date': entry_date
-                    })
-                    entry_number += 1
-                
-                current_entry = ""
-                line_count = 0
-        
-        # Don't forget remaining text
-        if current_entry.strip() and len(current_entry.strip()) > 20:
-            entry_date = base_date - timedelta(days=entry_number)
-            entries.append({
-                'text': current_entry.strip(),
-                'date': entry_date
-            })
     
     return entries
 
@@ -1751,8 +1623,8 @@ def bulk_delete_entries():
     
 
 if __name__ == '__main__':
-    print("🚀 Starting Health App Backend with Authentication...")
-    print("📊 Database URL:", DATABASE_URL)
+    print("\n🚀 Starting Health Diary App...")
+    print("🔍 Checking configuration...")
     print("🤖 OpenAI API configured:", "✅" if os.getenv('OPENAI_API_KEY') else "❌")
     print("🔐 JWT Secret configured:", "✅" if os.getenv('JWT_SECRET_KEY') else "⚠️  Using default (change for production)")
     

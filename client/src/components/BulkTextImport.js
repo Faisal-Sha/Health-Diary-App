@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import './BulkTextImport.css';
-
+const BASE_URL = process.env.REACT_APP_API_URL;
 
 function BulkTextImport({ onImportComplete, selectedProfile }) {
     const { authenticatedFetch } = useAuth();
@@ -29,7 +29,7 @@ function BulkTextImport({ onImportComplete, selectedProfile }) {
         try {
             console.log('🚀 Starting bulk text import...');
             
-            const response = await authenticatedFetch('http://localhost:5001/api/entries/bulk-import', {
+            const response = await authenticatedFetch(`${BASE_URL}/entries/bulk-import`, {
                 method: 'POST',
                 body: JSON.stringify({ 
                     text: bulkText,

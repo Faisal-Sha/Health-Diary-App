@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import './ManageProfileModals.css';
 
+const BASE_URL = process.env.REACT_APP_API_URL;
+
 const ManageProfileModals = ({ onClose, profiles, onProfileUpdated, onProfileDeleted }) => {
   const { authenticatedFetch } = useAuth();
   const [editingProfile, setEditingProfile] = useState(null);
@@ -56,7 +58,7 @@ const ManageProfileModals = ({ onClose, profiles, onProfileUpdated, onProfileDel
 
     try {
       const response = await authenticatedFetch(
-        `http://localhost:5001/api/family/profiles/${editingProfile.id}`, 
+        `${BASE_URL}/family/profiles/${editingProfile.id}`, 
         {
           method: 'PUT',
           body: JSON.stringify({
@@ -103,7 +105,7 @@ const ManageProfileModals = ({ onClose, profiles, onProfileUpdated, onProfileDel
 
     try {
       const response = await authenticatedFetch(
-        `http://localhost:5001/api/family/profiles/${profile.id}`, 
+        `${BASE_URL}/family/profiles/${profile.id}`, 
         {
           method: 'DELETE'
         }

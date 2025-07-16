@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import './AddProfileModal.css';
+const BASE_URL = process.env.REACT_APP_API_URL;
 
 const AddProfileModal = ({ onClose, onProfileAdded }) => {
   const { authenticatedFetch } = useAuth();
@@ -41,7 +42,7 @@ const AddProfileModal = ({ onClose, onProfileAdded }) => {
     setError('');
 
     try {
-      const response = await authenticatedFetch('http://localhost:5001/api/family/profiles', {
+      const response = await authenticatedFetch(`${BASE_URL}/family/profiles`, {
         method: 'POST',
         body: JSON.stringify(formData)
       });

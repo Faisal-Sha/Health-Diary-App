@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import axios from 'axios';
 
 const AuthContext = createContext();
 
@@ -12,7 +13,7 @@ export const useAuth = () => {
 };
 
 // API base URL
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = process.env.REACT_APP_API_URL;
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -79,6 +80,8 @@ export const AuthProvider = ({ children }) => {
   const register = async (email, password, familyName) => {
     try {
       setError(null);
+      console.log('Registering user:', { email, password, familyName }); 
+      console.log('API Base:', API_BASE); 
       const response = await fetch(`${API_BASE}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -114,6 +117,35 @@ export const AuthProvider = ({ children }) => {
     return localStorage.getItem('authToken');
   };
 
+  // Create axios instance with default configuration
+  const api = axios.create({
+    baseURL: API_BASE,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  // Add request interceptor for authentication
+  api.interceptors.request.use((config) => {
+    const token = getAuthToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  });
+
+  // Add response interceptor for handling 401
+  api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response && error.response.status === 401) {
+        logout();
+        throw new Error('Session expired. Please log in again.');
+      }
+      return Promise.reject(error);
+    }
+  );
+
   // Make authenticated API calls
   const authenticatedFetch = async (url, options = {}) => {
     const token = getAuthToken();
@@ -121,22 +153,15 @@ export const AuthProvider = ({ children }) => {
       throw new Error('No authentication token');
     }
 
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        ...options.headers,
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (response.status === 401) {
-      // Token expired, logout user
-      logout();
-      throw new Error('Session expired. Please log in again.');
+    try {
+      const response = await api.request({
+        url,
+        ...options
+      });
+      return response;
+    } catch (error) {
+      throw error;
     }
-
-    return response;
   };
 
   const value = {

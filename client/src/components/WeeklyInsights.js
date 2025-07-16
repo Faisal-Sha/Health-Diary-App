@@ -10,6 +10,8 @@ function WeeklyInsights({ lastEntryTimestamp, entries, selectedProfile }) {
     const [isUsingCache, setIsUsingCache] = useState(false);
     const [expandedSections, setExpandedSections] = useState({});
 
+    const BASE_URL = process.env.REACT_APP_API_URL;
+
     // Cache management functions
     const getCacheKey = () => selectedProfile ? `health_insights_cache_${selectedProfile.id}` : 'health_insights_cache';
     const getTimestampKey = () => selectedProfile ? `health_insights_timestamp_${selectedProfile.id}` : 'health_insights_timestamp';
