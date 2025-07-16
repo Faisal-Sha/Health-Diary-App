@@ -9,6 +9,8 @@ function WeeklyInsights({ lastEntryTimestamp }) {
     const [isUsingCache, setIsUsingCache] = useState(false);
     const [expandedSections, setExpandedSections] = useState({});
 
+    const BASE_URL = process.env.REACT_APP_API_URL;
+
     // Cache management functions
     const getCacheKey = () => 'health_insights_cache';
     const getTimestampKey = () => 'health_insights_timestamp';
@@ -85,7 +87,7 @@ function WeeklyInsights({ lastEntryTimestamp }) {
         try {
             console.log('🚀 Fetching fresh weekly insights from API...');
             
-            const response = await fetch('http://localhost:5001/api/analytics/weekly-summary?user_id=1');
+            const response = await fetch(`${BASE_URL}/analytics/weekly-summary?user_id=1`);
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);

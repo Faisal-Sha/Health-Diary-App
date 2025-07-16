@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './FileImport.css';
+const BASE_URL = process.env.REACT_APP_API_URL;
 
 function FileImport({ onImportComplete }) {
     const [isProcessing, setIsProcessing] = useState(false);
@@ -301,7 +302,7 @@ Amazing day! Exercise really helped boost my mood and energy. Sleeping well cons
         const text = await readFileAsText(file);
         
         // Send entire text to backend bulk import endpoint
-        const response = await fetch('http://localhost:5001/api/entries/bulk-import', {
+        const response = await fetch(`${BASE_URL}/entries/bulk-import`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: text })
@@ -332,7 +333,7 @@ Amazing day! Exercise really helped boost my mood and energy. Sleeping well cons
         // Send entries one by one to the regular create endpoint
         for (const entry of entries) {
             try {
-                const response = await fetch('http://localhost:5001/api/entries', {
+                const response = await fetch(`${BASE_URL}/entries`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
