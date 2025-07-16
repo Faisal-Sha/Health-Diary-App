@@ -800,6 +800,7 @@ def get_health_summary():
     """Get health analytics summary"""
     try:
         days = request.args.get('days', 30)
+        user_id = request.args.get('user_id', 1, type=int)
         
         conn = get_db_connection()
         if not conn:
@@ -820,8 +821,8 @@ def get_health_summary():
                 FROM health_metrics hm
                 JOIN raw_entries re ON hm.raw_entry_id = re.id
                 WHERE hm.user_id = %s 
-                AND re.entry_date >= CURRENT_DATE - INTERVAL '%s days'
-            """, (1, days))
+                AND re.entry_date >= CURRENT_DATE - INTERVAL %s
+            """, (user_id, f'{days} days'))
             
             summary = cursor.fetchone()
             
@@ -1276,6 +1277,8 @@ def parse_flexible_date(date_str):
     print(f"⚠️ Using fallback date for '{date_str}' -> {fallback}")
     return fallback
 
+    
+
 @app.route('/api/entries/<int:entry_id>', methods=['DELETE'])
 @jwt_required()
 def delete_entry(entry_id):
@@ -1321,7 +1324,7 @@ def delete_entry(entry_id):
             cursor.execute("""
                 DELETE FROM raw_entries 
                 WHERE id = %s AND user_id = %s
-            """, (entry_id,))  
+            """, (entry_id,user_id))  
             
             # Check if entry was actually deleted
             if cursor.rowcount == 0:
@@ -1346,6 +1349,127 @@ def delete_entry(entry_id):
         return jsonify({
             "success": False,
             "error": "Failed to delete entry"
+        }), 500
+    
+@app.route('/api/entries/<int:entry_id>', methods=['PUT'])
+@jwt_required()
+def update_entry(entry_id):
+    """
+    Update a specific diary entry
+    """
+    try:
+        family_id = get_jwt_identity()
+        data = request.get_json()
+        
+        # Get the new text and validate it
+        new_text = data.get('text', '').strip()
+        if not new_text:
+            return jsonify({"error": "Entry text cannot be empty"}), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        try:
+            cursor = conn.cursor()
+
+            # First, verify the entry exists and belongs to this family
+            cursor.execute("""
+                SELECT re.id, re.user_id, re.entry_text, re.entry_date, u.display_name, u.family_id
+                FROM raw_entries re
+                JOIN users u ON re.user_id = u.id
+                WHERE re.id = %s AND u.family_id = %s
+            """, (entry_id, family_id))
+
+            entry = cursor.fetchone()
+            if not entry:
+                return jsonify({
+                    "success": False,
+                    "error": "Entry not found or you don't have permission to edit it"
+                }), 404
+            
+            user_id = entry['user_id']
+            user_name = entry['display_name']
+            old_text = entry['entry_text']
+            entry_date = entry['entry_date']
+            
+            print(f"✏️ Updating entry {entry_id} for user {user_name} (ID: {user_id})")
+            print(f"Old text: {old_text[:50]}...")
+            print(f"New text: {new_text[:50]}...")
+            
+            # Re-process the new text with AI (to update health metrics)
+            print("🤖 Re-processing entry with AI...")
+            ai_data = extract_health_data_with_ai(new_text, user_id, entry_date)
+            
+            # Update ONLY the entry text (no updated_at column since it doesn't exist)
+            cursor.execute("""
+                UPDATE raw_entries 
+                SET entry_text = %s
+                WHERE id = %s AND user_id = %s
+            """, (new_text, entry_id, user_id))
+            
+            print(f"✅ Updated raw entry text")
+            
+            # Delete old health metrics for this entry
+            cursor.execute("""
+                DELETE FROM health_metrics 
+                WHERE raw_entry_id = %s
+            """, (entry_id,))
+            
+            print(f"✅ Deleted old health metrics")
+            
+            # Insert new health metrics
+            cursor.execute("""
+                INSERT INTO health_metrics (
+                    user_id, raw_entry_id, entry_date, mood_score, energy_level,
+                    pain_level, sleep_quality, sleep_hours, stress_level,
+                    ai_confidence, created_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                user_id,                              # user_id
+                entry_id,                             # raw_entry_id  
+                entry_date,                           # entry_date (use original date)
+                ai_data.get('mood_score'),            # mood_score
+                ai_data.get('energy_level'),          # energy_level
+                ai_data.get('pain_level'),            # pain_level
+                ai_data.get('sleep_quality'),         # sleep_quality
+                ai_data.get('sleep_hours'),           # sleep_hours
+                ai_data.get('stress_level'),          # stress_level
+                ai_data.get('confidence', 0.0),      # ai_confidence
+                datetime.now()                        # created_at
+            ))
+            
+            print(f"✅ Inserted new health metrics")
+            
+            # Update user's last_active timestamp
+            cursor.execute("""
+                UPDATE users SET last_active = NOW() WHERE id = %s
+            """, (user_id,))
+            
+            conn.commit()
+            
+            print(f"✅ Entry {entry_id} updated successfully")
+            
+            return jsonify({
+                "success": True,
+                "entry_id": entry_id,
+                "ai_confidence": ai_data.get('confidence', 0.0),
+                "message": f"Entry {entry_id} updated successfully",
+                "ai_extracted_data": ai_data  # Return the new AI data
+            })
+            
+        finally:
+            cursor.close()
+            conn.close()
+            
+    except Exception as e:
+        print(f"❌ Error updating entry {entry_id}: {e}")
+        import traceback
+        print(f"❌ Full traceback: {traceback.format_exc()}")
+        return jsonify({
+            "success": False,
+            "error": "Failed to update entry"
         }), 500
 
 @app.route('/api/entries/clear-all', methods=['DELETE'])

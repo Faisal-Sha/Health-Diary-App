@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import apiService from '../services/apiService';
 import './WeeklyInsights.css';
 
-function WeeklyInsights({ lastEntryTimestamp }) {
+function WeeklyInsights({ lastEntryTimestamp, entries, selectedProfile }) {
     const [summaryData, setSummaryData] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -12,8 +13,8 @@ function WeeklyInsights({ lastEntryTimestamp }) {
     const BASE_URL = process.env.REACT_APP_API_URL;
 
     // Cache management functions
-    const getCacheKey = () => 'health_insights_cache';
-    const getTimestampKey = () => 'health_insights_timestamp';
+    const getCacheKey = () => selectedProfile ? `health_insights_cache_${selectedProfile.id}` : 'health_insights_cache';
+    const getTimestampKey = () => selectedProfile ? `health_insights_timestamp_${selectedProfile.id}` : 'health_insights_timestamp';
 
     const getCachedData = () => {
         try {
@@ -44,6 +45,10 @@ function WeeklyInsights({ lastEntryTimestamp }) {
     };
 
     const shouldRefreshCache = () => {
+        if (!selectedProfile) {
+            return false;
+        }
+
         const cached = getCachedData();
         
         if (!cached) {
@@ -70,6 +75,12 @@ function WeeklyInsights({ lastEntryTimestamp }) {
     const loadWeeklySummary = async (forceRefresh = false) => {
         console.log('🔄 loadWeeklySummary called, forceRefresh:', forceRefresh);
 
+        if (!selectedProfile) {
+            console.log('❌ No profile selected for WeeklyInsights');
+            setError('Please select a profile to view insights');
+            return;
+        }
+
         if (!forceRefresh && !shouldRefreshCache()) {
             const cached = getCachedData();
             if (cached) {
@@ -87,18 +98,10 @@ function WeeklyInsights({ lastEntryTimestamp }) {
         try {
             console.log('🚀 Fetching fresh weekly insights from API...');
             
-            const response = await fetch(`${BASE_URL}/analytics/weekly-summary?user_id=1`);
+            const data = await apiService.getHealthSummary(selectedProfile, 30);
             
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
             
-            const data = await response.json();
             console.log('📊 Weekly insights API response:', data);
-            
-            if (data.error) {
-                throw new Error(data.error);
-            }
             
             const now = new Date().toLocaleString();
             
@@ -119,8 +122,17 @@ function WeeklyInsights({ lastEntryTimestamp }) {
     };
 
     useEffect(() => {
-        loadWeeklySummary();
-    }, [lastEntryTimestamp]);
+        if (selectedProfile) {
+            // Clear previous data when switching profiles
+            setSummaryData(null);
+            setLastUpdated(null);
+            setIsUsingCache(false);
+            setError(null);
+            
+            // Load data for new profile
+            loadWeeklySummary();
+        }
+    }, [selectedProfile?.id, lastEntryTimestamp]);
 
     const handleRefresh = () => {
         loadWeeklySummary(true);
@@ -146,6 +158,21 @@ function WeeklyInsights({ lastEntryTimestamp }) {
         }
         return { number: Number(value).toFixed(1), scale };
     };
+
+    if (!selectedProfile) {
+        return (
+            <div className="analytics-dashboard">
+                <div className="analytics-header">
+                    <h2>🧠 Weekly Health Insights</h2>
+                    <p>AI-powered analysis of your health patterns</p>
+                </div>
+                <div className="no-profile">
+                    <h3>👤 No Profile Selected</h3>
+                    <p>Please select a profile to view AI insights.</p>
+                </div>
+            </div>
+        );
+    }
 
     // Loading state
     if (isLoading) {

@@ -743,13 +743,15 @@ p {
 
 /* GRID CONTAINER - No horizontal scrolling */
 .entries-horizontal-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 20px;
   padding: 20px 0;
+  justify-content: flex-start;
+  align-items: flex-start;
 }
 
-/* Individual diary entry in grid layout */
+/* Individual diary entry in flex-wrap grid layout */
 .diary-entry.horizontal {
   background: white;
   border-radius: 15px;
@@ -757,9 +759,12 @@ p {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   border-left: 4px solid #3498db;
   transition: all 0.3s ease;
-  height: fit-content;
   position: relative;
-  width: 100%;
+  
+  /* FLEX-WRAP SIZING - entries flow horizontally and wrap */
+  flex: 0 1 300px; /* Don't grow, can shrink, base width 300px */
+  min-width: 280px; /* Minimum width before wrapping */
+  max-width: 400px; /* Maximum width for readability */
 }
 
 .diary-entry.horizontal:hover {
@@ -767,7 +772,7 @@ p {
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
-/* Entry header in grid layout */
+/* Entry header in flex-wrap layout */
 .diary-entry.horizontal .entry-header {
   display: flex;
   justify-content: space-between;
@@ -794,17 +799,23 @@ p {
   color: #95a5a6;
 }
 
-/* Entry text in grid layout */
+/* Entry text in flex-wrap layout - with optional scrolling for long text */
 .diary-entry.horizontal .entry-text {
   color: #2c3e50;
   line-height: 1.6;
   font-size: 1rem;
   margin-bottom: 15px;
-  max-height: 120px;
+  
+  /* OPTIONAL: Add max-height with scrolling for very long entries */
+  max-height: 150px;
   overflow-y: auto;
+  
+  /* REMOVE these two lines if you don't want scrolling: */
+  /* max-height: 150px; */
+  /* overflow-y: auto; */
 }
 
-/* Tags in grid layout */
+/* Tags in flex-wrap layout */
 .diary-entry.horizontal .entry-tags {
   display: flex;
   gap: 8px;
@@ -821,7 +832,7 @@ p {
   text-align: center;
 }
 
-/* AI confidence in grid layout */
+/* AI confidence in flex-wrap layout */
 .diary-entry.horizontal .ai-confidence {
   position: absolute;
   bottom: 10px;
@@ -831,7 +842,7 @@ p {
   font-weight: bold;
 }
 
-/* Delete button in grid layout */
+/* Delete button in flex-wrap layout */
 .diary-entry.horizontal .delete-button {
   background: none;
   border: none;
@@ -849,6 +860,64 @@ p {
 .diary-entry.horizontal .delete-button:hover {
   background-color: #fadbd8;
   transform: scale(1.1);
+}
+
+/* ========================================= */
+/* RESPONSIVE FLEX-WRAP BEHAVIOR */
+/* ========================================= */
+
+/* Large screens: More entries per row */
+@media (min-width: 1200px) {
+  .entries-horizontal-container {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  
+  .diary-entry.horizontal {
+    flex: 0 1 350px; /* Larger base width on big screens */
+    max-width: 450px;
+  }
+}
+
+/* Medium screens: Standard sizing */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .diary-entry.horizontal {
+    flex: 0 1 300px;
+    max-width: 400px;
+  }
+}
+
+/* Small tablets: Smaller entries, still wrap horizontally */
+@media (min-width: 600px) and (max-width: 767px) {
+  .entries-horizontal-container {
+    gap: 15px;
+  }
+  
+  .diary-entry.horizontal {
+    flex: 0 1 250px;
+    min-width: 220px;
+    max-width: 320px;
+    padding: 20px;
+  }
+}
+
+/* Mobile: Single column (entries stack vertically) */
+@media (max-width: 599px) {
+  .entries-horizontal-container {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .diary-entry.horizontal {
+    flex: 1 1 auto;
+    min-width: unset;
+    max-width: unset;
+    padding: 20px;
+  }
+  
+  .entries-section.horizontal {
+    padding: 15px;
+  }
 }
 
 /* ========================================= */
@@ -965,4 +1034,76 @@ p {
 .entries-horizontal-container.spacious .diary-entry.horizontal .entry-text {
   max-height: 150px;
   font-size: 1.1rem;
+}
+
+.entries-vertical-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 20px 0;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Traditional list entry styling */
+.entries-vertical-container .diary-entry {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #3498db;
+  transition: all 0.3s ease;
+}
+
+.entries-vertical-container .diary-entry:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+/* Entry header in list layout */
+.entries-vertical-container .diary-entry .entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+  font-size: 0.9em;
+  color: #7f8c8d;
+}
+
+/* Entry text in list layout */
+.entries-vertical-container .diary-entry .entry-text {
+  color: #2c3e50;
+  line-height: 1.6;
+  font-size: 1rem;
+  margin-bottom: 15px;
+  /* No max-height restriction for list view */
+}
+
+/* Delete button in list layout */
+.entries-vertical-container .diary-entry .delete-button {
+  background: none;
+  border: none;
+  font-size: 1.2em;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  color: #e74c3c;
+}
+
+.entries-vertical-container .diary-entry .delete-button:hover {
+  background-color: #fadbd8;
+  transform: scale(1.1);
+}
+
+/* Responsive adjustments for list view */
+@media (max-width: 768px) {
+  .entries-vertical-container {
+    padding: 15px;
+    max-width: 100%;
+  }
+  
+  .entries-vertical-container .diary-entry {
+    padding: 15px;
+  }
 }
