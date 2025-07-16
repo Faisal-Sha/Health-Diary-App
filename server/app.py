@@ -1628,5 +1628,4 @@ if __name__ == '__main__':
     print("🤖 OpenAI API configured:", "✅" if os.getenv('OPENAI_API_KEY') else "❌")
     print("🔐 JWT Secret configured:", "✅" if os.getenv('JWT_SECRET_KEY') else "⚠️  Using default (change for production)")
     
-    # Run the application
     app.run(debug=True, host='0.0.0.0', port=5000)

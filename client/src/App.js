@@ -8,6 +8,7 @@ import WeeklyInsights from './components/WeeklyInsights';
 import HeroSection from './components/HeroSection';
 import HealthCharts from './components/HealthCharts';
 import DeveloperTools from './components/DeveloperTools';
+import FeatureShowcase from './components/FeatureShowcase';
 import apiService from './services/apiService';
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -60,7 +61,7 @@ function AppContent() {
       } catch (error) {
         setBackendStatus('disconnected');
         console.error('❌ Backend connection failed:', error);
-        setError('Cannot connect to backend server. Please make sure Flask is running on port 5001.');
+        setError('Cannot connect to backend server. Please make sure Flask is running on port 5000.');
       }
     };
 
@@ -349,6 +350,8 @@ function AppContent() {
             totalEntries={diaryEntries.length}
             selectedProfile={selectedProfile}
           />
+
+          <FeatureShowcase setCurrentView={setCurrentView} />
           
           {/* Call to Action */}
           <div className="feature-showcase-cta">
@@ -479,79 +482,59 @@ function AppContent() {
 
               {/* List View Content */}
             {/* List View Content with list/grid toggle */}
-              {currentView === 'list' && (
-                <div className={`entries-section ${listViewMode === 'grid' ? 'horizontal' : ''}`}>
-                  
-                  {/* View mode toggle */}
-                  <div className="list-view-toggle">
-                    <button
-                      className={`list-toggle-btn ${listViewMode === 'list' ? 'active' : ''}`}
-                      onClick={() => setListViewMode('list')}
-                    >
-                      📋 List View
-                    </button>
-                    <button
-                      className={`list-toggle-btn ${listViewMode === 'grid' ? 'active' : ''}`}
-                      onClick={() => setListViewMode('grid')}
-                    >
-                      🔲 Grid View
-                    </button>
-                  </div>
+            {currentView === 'list' && (
+              <div className={`entries-section ${listViewMode === 'grid' ? 'horizontal' : ''}`}>
+                
+                {/* View mode toggle */}
+                <div className="list-view-toggle">
+                  <button
+                    className={`list-toggle-btn ${listViewMode === 'list' ? 'active' : ''}`}
+                    onClick={() => setListViewMode('list')}
+                  >
+                    📋 List View
+                  </button>
+                  <button
+                    className={`list-toggle-btn ${listViewMode === 'grid' ? 'active' : ''}`}
+                    onClick={() => setListViewMode('grid')}
+                  >
+                    🔲 Grid View
+                  </button>
+                </div>
 
-                  <h3>Your Recent Entries ({diaryEntries.length} total)</h3>
+                <h3>Your Recent Entries ({diaryEntries.length} total)</h3>
 
-                  {/* Grid layout */}
-                  {listViewMode === 'grid' && diaryEntries.length > 0 && (
-                <div 
-                  className="entries-horizontal-container"
-                  style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '20px',
-                    padding: '20px 0',
-                    justifyContent: 'flex-start',
-                    alignItems: 'flex-start',
-                    textAlign: 'left',
-                    width: '100%'
-                  }}
-                >
-                  {diaryEntries.map((entry, index) => (
-                    <div
-                      key={entry.id || index}
-                      style={{
-                        flex: '0 0 300px',
-                        minWidth: '280px',
-                        maxWidth: '400px'
-                      }}
-                    >
+                {/* Grid layout - COMPLETELY CLEAN */}
+                {listViewMode === 'grid' && diaryEntries.length > 0 && (
+                  <div className="entries-horizontal-container">
+                    {diaryEntries.map((entry, index) => (
                       <DiaryEntry 
+                        key={entry.id || index}
                         entry={entry}
                         deleteEntry={handleDeleteEntry}
                         viewMode="grid"
                         onEntryUpdated={handleEntryUpdated}
                       />
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
 
-                  {/* Traditional list layout (vertical) */}
-                  {listViewMode === 'list' && (
-                    <div className="entries-vertical-container">
-                      {diaryEntries.map((entry) => (
-                        <DiaryEntry 
-                          key={entry.id}
-                          entry={entry}
-                          deleteEntry={handleDeleteEntry}
-                          viewMode="list"
-                          onEntryUpdated={handleEntryUpdated}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  
-                </div>
-              )}
+                {/* List layout (vertical) */}
+                {listViewMode === 'list' && (
+                  <div className="entries-vertical-container">
+                    {diaryEntries.map((entry) => (
+                      <DiaryEntry 
+                        key={entry.id}
+                        entry={entry}
+                        deleteEntry={handleDeleteEntry}
+                        viewMode="list"
+                        onEntryUpdated={handleEntryUpdated}
+                      />
+                    ))}
+                  </div>
+                )}
+                
+              </div>
+            )}
             </>
           )}
 

@@ -47,17 +47,17 @@ function DiaryEntry({entry, deleteEntry, viewMode = 'list', onEntryUpdated}) {
             alert("Entry text cannot be empty!");
             return;
         }
-
+    
         if (editText.trim() === entry.text.trim()) {
             alert("No changes made!");
             handleCancelEdit();
             return;
         }
-
+    
         try {
             setIsLoading(true);
             console.log('💾 Saving edited entry:', entry.id);
-
+    
             // Send to backend for update
             const result = await apiService.updateEntry(entry.id, editText.trim());
             
@@ -74,14 +74,15 @@ function DiaryEntry({entry, deleteEntry, viewMode = 'list', onEntryUpdated}) {
                 stressLevel: result.ai_extracted_data?.stress_level,
                 aiConfidence: result.ai_extracted_data?.confidence || 0
             };
-
+    
             // Notify parent component of the update
             onEntryUpdated(updatedEntry);
-
+    
             // Clear editing state
             setIsEditing(false);
             setEditText('');
             
+            // FIXED: Clean alert message without the corrupted text
             alert(`Entry Updated! New AI Confidence: ${Math.round((result.ai_extracted_data?.confidence || 0) * 100)}%`);
             
         } catch (error) {

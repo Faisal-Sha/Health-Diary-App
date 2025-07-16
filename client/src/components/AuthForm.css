@@ -112,15 +112,17 @@
   /* Left panel - Branding */
   .branding-panel {
     flex: 1;
-    background: linear-gradient(135deg, #4A90E2, #50C9C3);
-    padding: 60px 40px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
+    background-image: url(../images/health-app\ image-Photoroom.jpg);
+    color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* Changed from 'center' to 'flex-start' */
+  align-items: center;
+  padding: 40px;
+  position: relative;
+  overflow: hidden;
+  /* Add some top padding to give breathing room from the edge */
+  padding-top: 35px; 
   }
   
   /* Subtle pattern overlay for branding panel */

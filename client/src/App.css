@@ -47,8 +47,14 @@ p {
 
 /*Entries section */
 .entries-section {
-  max-width: 600px;
+  width: 100%;
   margin: 0 auto;
+  padding: 0 20px; /* Add some side padding instead */
+}
+
+/* But keep the constraint ONLY for list view: */
+.entries-section:not(.horizontal) {
+  max-width: 800px; /* Only constrain when NOT in grid mode */
 }
 
 .entries-section h3 {
@@ -727,246 +733,6 @@ p {
 
 
 
-/* Fixed List View: 
-.entries-section.horizontal {
-  max-width: 100%;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-.entries-section.horizontal h3 {
-  color: #2c3e50;
-  margin-bottom: 30px;
-  text-align: center;
-  font-size: 1.5rem;
-}
-
-/* GRID CONTAINER - No horizontal scrolling */
-.entries-horizontal-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  padding: 20px 0;
-  justify-content: flex-start;
-  align-items: flex-start;
-}
-
-/* Individual diary entry in flex-wrap grid layout */
-.diary-entry.horizontal {
-  background: white;
-  border-radius: 15px;
-  padding: 25px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-left: 4px solid #3498db;
-  transition: all 0.3s ease;
-  position: relative;
-  
-  /* FLEX-WRAP SIZING - entries flow horizontally and wrap */
-  flex: 0 1 300px; /* Don't grow, can shrink, base width 300px */
-  min-width: 280px; /* Minimum width before wrapping */
-  max-width: 400px; /* Maximum width for readability */
-}
-
-.diary-entry.horizontal:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-}
-
-/* Entry header in flex-wrap layout */
-.diary-entry.horizontal .entry-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 15px;
-  font-size: 0.9em;
-  color: #7f8c8d;
-}
-
-.diary-entry.horizontal .entry-date-time {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.diary-entry.horizontal .entry-date {
-  font-weight: bold;
-  color: #2c3e50;
-  font-size: 1rem;
-}
-
-.diary-entry.horizontal .entry-time {
-  font-size: 0.8em;
-  color: #95a5a6;
-}
-
-/* Entry text in flex-wrap layout - with optional scrolling for long text */
-.diary-entry.horizontal .entry-text {
-  color: #2c3e50;
-  line-height: 1.6;
-  font-size: 1rem;
-  margin-bottom: 15px;
-  
-  /* OPTIONAL: Add max-height with scrolling for very long entries */
-  max-height: 150px;
-  overflow-y: auto;
-  
-  /* REMOVE these two lines if you don't want scrolling: */
-  /* max-height: 150px; */
-  /* overflow-y: auto; */
-}
-
-/* Tags in flex-wrap layout */
-.diary-entry.horizontal .entry-tags {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 15px;
-  flex-wrap: wrap;
-}
-
-.diary-entry.horizontal .mood-tag,
-.diary-entry.horizontal .symptoms-tag {
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.8em;
-  font-weight: bold;
-  text-align: center;
-}
-
-/* AI confidence in flex-wrap layout */
-.diary-entry.horizontal .ai-confidence {
-  position: absolute;
-  bottom: 10px;
-  right: 15px;
-  font-size: 0.7em;
-  color: #8e44ad;
-  font-weight: bold;
-}
-
-/* Delete button in flex-wrap layout */
-.diary-entry.horizontal .delete-button {
-  background: none;
-  border: none;
-  font-size: 1.2em;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 50%;
-  transition: all 0.3s ease;
-  color: #e74c3c;
-  position: absolute;
-  top: 15px;
-  right: 15px;
-}
-
-.diary-entry.horizontal .delete-button:hover {
-  background-color: #fadbd8;
-  transform: scale(1.1);
-}
-
-/* ========================================= */
-/* RESPONSIVE FLEX-WRAP BEHAVIOR */
-/* ========================================= */
-
-/* Large screens: More entries per row */
-@media (min-width: 1200px) {
-  .entries-horizontal-container {
-    max-width: 1400px;
-    margin: 0 auto;
-  }
-  
-  .diary-entry.horizontal {
-    flex: 0 1 350px; /* Larger base width on big screens */
-    max-width: 450px;
-  }
-}
-
-/* Medium screens: Standard sizing */
-@media (min-width: 768px) and (max-width: 1199px) {
-  .diary-entry.horizontal {
-    flex: 0 1 300px;
-    max-width: 400px;
-  }
-}
-
-/* Small tablets: Smaller entries, still wrap horizontally */
-@media (min-width: 600px) and (max-width: 767px) {
-  .entries-horizontal-container {
-    gap: 15px;
-  }
-  
-  .diary-entry.horizontal {
-    flex: 0 1 250px;
-    min-width: 220px;
-    max-width: 320px;
-    padding: 20px;
-  }
-}
-
-/* Mobile: Single column (entries stack vertically) */
-@media (max-width: 599px) {
-  .entries-horizontal-container {
-    flex-direction: column;
-    gap: 15px;
-  }
-  
-  .diary-entry.horizontal {
-    flex: 1 1 auto;
-    min-width: unset;
-    max-width: unset;
-    padding: 20px;
-  }
-  
-  .entries-section.horizontal {
-    padding: 15px;
-  }
-}
-
-/* ========================================= */
-/* RESPONSIVE GRID BEHAVIOR */
-/* ========================================= */
-
-/* Large screens: 3-4 columns */
-@media (min-width: 1200px) {
-  .entries-horizontal-container {
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    max-width: 1400px;
-    margin: 0 auto;
-  }
-}
-
-/* Medium screens: 2-3 columns */
-@media (min-width: 768px) and (max-width: 1199px) {
-  .entries-horizontal-container {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  }
-}
-
-/* Small tablets: 2 columns */
-@media (min-width: 600px) and (max-width: 767px) {
-  .entries-horizontal-container {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-  }
-  
-  .diary-entry.horizontal {
-    padding: 20px;
-  }
-}
-
-/* Mobile: 1 column */
-@media (max-width: 599px) {
-  .entries-horizontal-container {
-    grid-template-columns: 1fr;
-    gap: 15px;
-  }
-  
-  .diary-entry.horizontal {
-    padding: 20px;
-  }
-  
-  .entries-section.horizontal {
-    padding: 15px;
-  }
-}
 
 /* ========================================= */
 /* VIEW TOGGLE BUTTON FOR LIST/GRID */
@@ -1002,38 +768,78 @@ p {
   box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
 }
 
+/* Container must be grid */
+.entries-horizontal-container {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
+  gap: 20px !important;
+  padding: 20px !important;
+  width: 100% !important;
+  max-width: 1200px !important;
+  margin: 0 auto !important;
+}
+
+/* CRITICAL: Reset diary entry sizing for grid */
+.diary-entry.horizontal {
+  /* Remove any width/margin conflicts */
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  
+  /* Grid item properties */
+  justify-self: stretch !important;
+  align-self: start !important;
+  
+  /* Visual styling */
+  background: white;
+  border-radius: 15px;
+  padding: 25px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #3498db;
+  transition: all 0.3s ease;
+  position: relative;
+  min-height: 200px;
+}
+
+/* Hover effect */
+.diary-entry.horizontal:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
 /* ========================================= */
-/* GRID DENSITY OPTIONS (OPTIONAL) */
+/* RESPONSIVE BREAKPOINTS */
 /* ========================================= */
 
-/* Compact grid - smaller cards, more columns */
-.entries-horizontal-container.compact {
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 15px;
+@media (min-width: 1200px) {
+  .entries-horizontal-container {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)) !important;
+    max-width: 1400px !important;
+  }
 }
 
-.entries-horizontal-container.compact .diary-entry.horizontal {
-  padding: 20px;
+@media (min-width: 768px) and (max-width: 1199px) {
+  .entries-horizontal-container {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+  }
 }
 
-.entries-horizontal-container.compact .diary-entry.horizontal .entry-text {
-  max-height: 100px;
-  font-size: 0.9rem;
+@media (min-width: 480px) and (max-width: 767px) {
+  .entries-horizontal-container {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)) !important;
+    gap: 15px !important;
+  }
 }
 
-/* Spacious grid - larger cards, fewer columns */
-.entries-horizontal-container.spacious {
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 25px;
-}
-
-.entries-horizontal-container.spacious .diary-entry.horizontal {
-  padding: 30px;
-}
-
-.entries-horizontal-container.spacious .diary-entry.horizontal .entry-text {
-  max-height: 150px;
-  font-size: 1.1rem;
+@media (max-width: 479px) {
+  .entries-horizontal-container {
+    grid-template-columns: 1fr !important;
+    gap: 15px !important;
+    padding: 15px !important;
+  }
 }
 
 .entries-vertical-container {

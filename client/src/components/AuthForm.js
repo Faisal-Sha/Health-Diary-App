@@ -150,18 +150,7 @@ const AuthForm = () => {
           </p>
           
           <div className="brand-features">
-            <div className="feature-item">
-              <div className="feature-icon">📊</div>
-              Health Analytics
-            </div>
-            <div className="feature-item">
-              <div className="feature-icon">👨‍👩‍👧‍👦</div>
-              Family Profiles
-            </div>
-            <div className="feature-item">
-              <div className="feature-icon">🔒</div>
-              Secure & Private
-            </div>
+            
           </div>
         </div>
 
