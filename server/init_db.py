@@ -1,6 +1,6 @@
 from app import create_app
 from extensions import db
-from models import User, Family, HealthEntry
+from models import User, Family, HealthMetric, RawEntry
 
 def init_db():
     """Initialize the database and create tables"""
