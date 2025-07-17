@@ -28,16 +28,11 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuthStatus = async () => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = getAuthToken();
       if (token) {
-        // Verify token with backend
-        const response = await fetch(`${API_BASE}/auth/verify`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setUser(data.user);
+        const response = await api.get('/auth/verify');
+        if (response.data.success) {
+          setUser(response.data.user);
         } else {
           // Token is invalid, remove it
           localStorage.removeItem('authToken');
@@ -54,24 +49,14 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       setError(null);
-      const response = await fetch(`${API_BASE}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        localStorage.setItem('authToken', data.token);
-        setUser(data.user);
-        return { success: true };
-      } else {
-        setError(data.error);
-        return { success: false, error: data.error };
-      }
+      const response = await api.post('/auth/login', { email, password });
+  
+      localStorage.setItem('authToken', response.data.token);
+      setUser(response.data.user);
+      return { success: true };
     } catch (error) {
-      const errorMsg = 'Login failed. Please check your connection.';
+      const errorMsg =
+        error.response?.data?.error || 'Login failed. Please try again.';
       setError(errorMsg);
       return { success: false, error: errorMsg };
     }
@@ -80,26 +65,18 @@ export const AuthProvider = ({ children }) => {
   const register = async (email, password, familyName) => {
     try {
       setError(null);
-      console.log('Registering user:', { email, password, familyName }); 
-      console.log('API Base:', API_BASE); 
-      const response = await fetch(`${API_BASE}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, familyName })
+      const response = await api.post('/auth/register', {
+        email,
+        password,
+        familyName
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        localStorage.setItem('authToken', data.token);
-        setUser(data.user);
-        return { success: true };
-      } else {
-        setError(data.error);
-        return { success: false, error: data.error };
-      }
+  
+      localStorage.setItem('authToken', response.data.token);
+      setUser(response.data.user);
+      return { success: true };
     } catch (error) {
-      const errorMsg = 'Registration failed. Please check your connection.';
+      const errorMsg =
+        error.response?.data?.error || 'Registration failed. Please try again.';
       setError(errorMsg);
       return { success: false, error: errorMsg };
     }

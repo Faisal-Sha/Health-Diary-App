@@ -63,10 +63,10 @@ def register():
         # Hash password securely
         password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         
-        # Create family account with explicit UUID generation
+        # Create family account (ID will be auto-incremented)
         cursor.execute("""
-            INSERT INTO families (id, family_name, email, password_hash, created_at)
-            VALUES (gen_random_uuid(), %s, %s, %s, NOW())
+            INSERT INTO families (family_name, email, password_hash, created_at)
+            VALUES (%s, %s, %s, NOW())
             RETURNING id, family_name, email
         """, (family_name, email, password_hash))
         
@@ -108,8 +108,8 @@ def register():
         
         conn.commit()
         
-        # Create JWT token
-        token = create_access_token(identity=family_id)
+        # Create JWT token - ensure identity is a string
+        token = create_access_token(identity=str(family_id))
         
         response_data = {
             "success": True,
@@ -151,6 +151,7 @@ def login():
         cursor = conn.cursor()
         
         # Get family account by email
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         cursor.execute("""
             SELECT id, family_name, email, password_hash 
             FROM families WHERE email = %s
@@ -165,7 +166,7 @@ def login():
             return jsonify({"error": "Invalid email or password"}), 401
         
         # Password is correct - create JWT token
-        token = create_access_token(identity=family['id'])
+        token = create_access_token(identity=str(family['id']))
         
         return jsonify({
             "success": True,
@@ -185,7 +186,7 @@ def login():
         if 'conn' in locals():
             conn.close()
 
-@auth_bp.route('/me', methods=['GET'])
+@auth_bp.route('/verify', methods=['GET'])
 @jwt_required()
 def verify_token():
     """Verify JWT token is still valid and return user info"""
@@ -196,7 +197,8 @@ def verify_token():
         if not conn:
             return jsonify({"error": "Database connection failed"}), 500
         
-        cursor = conn.cursor()
+        # Use RealDictCursor to get results as dictionaries
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         # Get family info
         cursor.execute("""

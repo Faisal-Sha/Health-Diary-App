@@ -120,18 +120,15 @@ const ProfileSelector = () => {
   const loadFamilyProfiles = async () => {
     try {
       setError(null);
-      const response = await authenticatedFetch(`${BASE_URL}/family/profiles`);
+      const response = await authenticatedFetch(`/family/profiles`);
       
-      if (response.ok) {
-        const profiles = await response.json();
-        setFamilyProfiles(profiles);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to load profiles');
-      }
+      // With axios, the response data is in response.data
+      setFamilyProfiles(response.data);
     } catch (error) {
       console.error('Failed to load profiles:', error);
-      setError('Failed to load family profiles. Please try again.');
+      // Get error message from axios error response or use a default message
+      const errorMessage = error.response?.data?.error || 'Failed to load family profiles. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
