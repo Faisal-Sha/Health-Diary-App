@@ -1,22 +1,57 @@
 version: "3.9"
 services:
-  frontend:
-    build:
-      context: ./client
-      dockerfile: Dockerfile.prod
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx-reverse-proxy
+    restart: unless-stopped
     ports:
-      - "3000:80"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/certbot/conf:/etc/letsencrypt
+      - ./nginx/certbot/www:/var/www/certbot
+    depends_on:
+      - frontend
+      - backend
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - ./nginx/certbot/conf:/etc/letsencrypt
+      - ./nginx/certbot/www:/var/www/certbot
+    entrypoint: >
+      sh -c "certbot certonly --webroot --webroot-path=/var/www/certbot
+      --email faisal712000@gmail.com --agree-tos --no-eff-email
+      -d healthdiaryonline.com -d www.healthdiaryonline.com"
+
+  frontend:
+    # build:
+    #   context: ./client
+    #   dockerfile: Dockerfile.prod
+    image: sakjin/health-diary-frontend:latest
+    ports:
+      - "80"
+    environment:
+      - REACT_APP_API_URL=https://healthdiaryonline.com/api
     depends_on:
       - backend
 
   backend:
-    build:
-      context: ./server
-      dockerfile: Dockerfile.prod
+    # build:
+    #   context: ./server
+    #   dockerfile: Dockerfile.prod
+    image: sakjin/health-diary:latest
     ports:
       - "5000:5000"
-    env_file:
-      - ./server/.env
+    environment:
+      - OPENAI_API_KEY=Rr8b7V3byZBRhPHrg
+      - DATABASE_URL=postgresql://username:password@db/health_app
+      - JWT_SECRET_KEY=56dafsad324fsafas789fadgafa
+      - FLASK_PORT=5000
+      - FLASK_DEBUG=false
     depends_on:
       - db
 
