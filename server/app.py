@@ -1222,7 +1222,6 @@ def split_bulk_text_into_entries(bulk_text):
     
     return entries
 
-
 def parse_flexible_date(date_str):
     """
     Enhanced date parsing with better error handling
@@ -1277,7 +1276,6 @@ def parse_flexible_date(date_str):
     print(f"⚠️ Using fallback date for '{date_str}' -> {fallback}")
     return fallback
 
-    
 
 @app.route('/api/entries/<int:entry_id>', methods=['DELETE'])
 @jwt_required()
@@ -1536,8 +1534,6 @@ def clear_all_entries():
             "success": False,
             "error": "Failed to clear all entries"
         }), 500
-    
-
 
 @app.route('/api/entries/bulk-delete', methods=['DELETE'])
 @jwt_required()
@@ -1620,7 +1616,6 @@ def bulk_delete_entries():
             "success": False,
             "error": "Failed to delete entries"
         }), 500
-    
 
 if __name__ == '__main__':
     print("\n🚀 Starting Health Diary App...")
