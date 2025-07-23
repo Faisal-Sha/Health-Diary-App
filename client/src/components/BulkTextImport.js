@@ -30,44 +30,46 @@ function BulkTextImport({ onImportComplete, selectedProfile }) {
             console.log('🚀 Starting bulk text import...');
             
             const response = await authenticatedFetch(`${BASE_URL}/entries/bulk-import`, {
-                method: 'POST',
-                body: JSON.stringify({ 
-                    text: bulkText,
-                    user_id: selectedProfile.id  
-                })
+              method: 'POST',
+              data: { 
+                text: bulkText,
+                user_id: selectedProfile.id
+              }
             });
-
-            const result = await response.json();
-            
+          
+            const result = response.data;
+          
             if (result.success) {
-                const summary = `✅ Bulk Import Successful!\n\n` +
-                    `📊 Results:\n` +
-                    `• Found: ${result.total_found} potential entries\n` +
-                    `• Processed: ${result.processed} entries\n` +
-                    `• Skipped: ${result.skipped} entries\n` +
-                    `• Avg AI Confidence: ${Math.round(result.processing_summary.avg_confidence * 100)}%\n` +
-                    `• Date Range: ${result.processing_summary.date_range.earliest} to ${result.processing_summary.date_range.latest}`;
-                
-                alert(summary);
-                
-                // Clear the text area
-                setBulkText('');
-                setShowBulkMode(false);
-                
-                // Notify parent to refresh data
-                if (onImportComplete) {
-                    onImportComplete();
-                }
+              const summary = `✅ Bulk Import Successful!\n\n` +
+                `📊 Results:\n` +
+                `• Found: ${result.total_found} potential entries\n` +
+                `• Processed: ${result.processed} entries\n` +
+                `• Skipped: ${result.skipped} entries\n` +
+                `• Avg AI Confidence: ${Math.round(result.processing_summary.avg_confidence * 100)}%\n` +
+                `• Date Range: ${result.processing_summary.date_range.earliest} to ${result.processing_summary.date_range.latest}`;
+              
+              alert(summary);
+          
+              setBulkText('');
+              setShowBulkMode(false);
+          
+              if (onImportComplete) {
+                onImportComplete();
+              }
             } else {
-                throw new Error(result.error || 'Import failed');
+              // Just in case the backend returns 200 but sets success: false
+              throw new Error(result.error || 'Import failed');
             }
-            
-        } catch (error) {
+          
+          } catch (error) {
             console.error('❌ Bulk import failed:', error);
-            alert(`❌ Import failed: ${error.message}`);
-        } finally {
+            const errorMsg =
+              error.response?.data?.error || error.message || 'Import failed';
+            alert(`❌ Import failed: ${errorMsg}`);
+          } finally {
             setIsProcessing(false);
-        }
+          }
+          
     };
 
     const exampleText = `January 15, 2024

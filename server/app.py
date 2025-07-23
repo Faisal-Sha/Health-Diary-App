@@ -89,7 +89,7 @@ analytics_engine = HealthAnalyticsEngine(
 def get_db_connection():
     """Create database connection"""
     try:
-        conn = MongoClient(DATABASE_URL)
+        conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
         return conn
     except Exception as e:
         print(f"Database connection error: {e}")
