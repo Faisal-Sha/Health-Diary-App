@@ -1,7 +1,6 @@
 from extensions import db
 from datetime import datetime
 from sqlalchemy.dialects.postgresql import UUID
-import uuid
 
 class Family(db.Model):
     __tablename__ = 'families'
@@ -42,6 +41,9 @@ class RawEntry(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     entry_text = db.Column(db.Text)
+    entry_date = db.Column(db.Date)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
 
     # One-to-one: RawEntry -> HealthMetric
     health_metric = db.relationship('HealthMetric', uselist=False, backref='raw_entry')

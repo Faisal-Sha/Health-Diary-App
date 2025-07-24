@@ -3,15 +3,14 @@ Health Analytics Engine - Advanced pattern analysis and insights generation
 This module handles all the statistical analysis and AI-powered insights
 """
 
-import psycopg2
 from psycopg2.extras import RealDictCursor
 from datetime import datetime, timedelta
 import json
 import statistics
 from openai import OpenAI
-import os
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Optional
 from dataclasses import dataclass
+from utils.db_utils import get_db_connection
 
 @dataclass
 class HealthSummary:
@@ -39,30 +38,21 @@ class HealthSummary:
 
 
 class HealthAnalyticsEngine:
-    def __init__(self, database_url: str, openai_api_key: str):
+    def __init__(self, openai_api_key: str):
         """Initialize the analytics engine with database and AI connections"""
-        self.database_url = database_url
         self.openai_client = OpenAI(api_key=openai_api_key)
-
-    def get_db_connection(self):
-        """Create database connection"""
-        try:
-            return psycopg2.connect(self.database_url, cursor_factory=RealDictCursor)
-        except Exception as e:
-            print(f"Database connection error: {e}")
-            return None
     
     def get_weekly_data(self, user_id: int = 1, weeks_back: int = 1) -> List[Dict]:
         """
         Get health data for the specified number of weeks back
         Returns raw data that we'll analyze - FIXED: Complete SQL query
         """
-        conn = self.get_db_connection()
+        conn = get_db_connection()
         if not conn:
             return []
         
         try:
-            cursor = conn.cursor()
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             
             # Calculate date range
             end_date = datetime.now().date()

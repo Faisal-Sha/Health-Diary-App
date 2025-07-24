@@ -1,25 +1,12 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
 import bcrypt
-import psycopg2
 from psycopg2.extras import RealDictCursor
-import os
 import traceback
-from extensions import db
+from utils.db_utils import get_db_connection
 
 # Create a Blueprint for auth routes
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
-
-DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://username:password@db/health_app')
-
-def get_db_connection():
-    """Create database connection"""
-    try:
-        conn = psycopg2.connect(DATABASE_URL)
-        return conn
-    except Exception as e:
-        print(f"❌ Database connection error: {e}")
-        return None
 
 def register_auth_routes(app):
     """Register the auth blueprint with the app"""
@@ -53,7 +40,7 @@ def register():
         if not conn:
             return jsonify({"error": "Database connection failed"}), 500
         
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         # Check if email already exists
         cursor.execute("SELECT id FROM families WHERE email = %s", (email,))
@@ -74,8 +61,8 @@ def register():
         if not family:
             return jsonify({"error": "Failed to create family account"}), 500
             
-        family_id = family[0]
-        family_name = family[1]
+        family_id = family['id']
+        family_name = family['family_name']
         print(f"✅ Family created with ID: {family_id}")
         
         # Create admin user for the family with unique username and explicit UUID
@@ -104,7 +91,7 @@ def register():
         """, (family_id, username, "Admin", "👑", "#6c5ce7", "admin"))
         
         admin_profile = cursor.fetchone()
-        print(f"✅ Admin profile created with ID: {admin_profile[0]}")
+        print(f"✅ Admin profile created with ID: {admin_profile['id']}")
         
         conn.commit()
         
@@ -148,7 +135,7 @@ def login():
         if not conn:
             return jsonify({"error": "Database connection failed"}), 500
         
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         # Get family account by email
         cursor = conn.cursor(cursor_factory=RealDictCursor)

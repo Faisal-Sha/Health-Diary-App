@@ -1,24 +1,11 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-import psycopg2
 from psycopg2.extras import RealDictCursor
-import os
 import traceback
-from extensions import db
+from utils.db_utils import get_db_connection
 
 # Create a Blueprint for family routes
 family_bp = Blueprint('family', __name__, url_prefix='/api/family')
-
-DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://username:password@db/health_app')
-
-def get_db_connection():
-    """Create database connection"""
-    try:
-        conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
-        return conn
-    except Exception as e:
-        print(f"Database connection error: {e}")
-        return None
 
 def register_family_routes(app):
     """Register the family blueprint with the app"""
@@ -39,7 +26,7 @@ def get_family_profiles():
             print("❌ Database connection failed")
             return jsonify({"error": "Database connection failed"}), 500
         
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         # First, check if family exists
         cursor.execute("SELECT id, family_name FROM families WHERE id = %s", (family_id,))
@@ -134,7 +121,7 @@ def create_family_profile():
         if not conn:
             return jsonify({"error": "Database connection failed"}), 500
         
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         # Check if name already exists in this family
         cursor.execute("""
@@ -210,7 +197,7 @@ def update_family_profile(profile_id):
         if not conn:
             return jsonify({"error": "Database connection failed"}), 500
         
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         # Verify profile belongs to this family
         cursor.execute("""
@@ -279,7 +266,7 @@ def delete_family_profile(profile_id):
         if not conn:
             return jsonify({"error": "Database connection failed"}), 500
         
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         # Verify profile belongs to this family and get name
         cursor.execute("""
