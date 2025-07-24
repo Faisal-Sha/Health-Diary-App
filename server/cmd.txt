@@ -28,3 +28,7 @@ docker push sakjin/health-diary-frontend:latest
 cd server/ && docker build -t sakjin/health-diary:latest -f Dockerfile.prod .
 
 cd client/ && docker build -t sakjin/health-diary-frontend:latest -f Dockerfile.prod .
+
+
+# Connect to the database
+docker compose -f docker-compose.dev.yml exec db psql -U username -d health_app
