@@ -4,12 +4,18 @@ from datetime import datetime
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from extensions import db, migrate, jwt, cors
+from config import DevelopmentConfig, ProductionConfig, TestingConfig
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables only for non-testing environments
+if os.getenv("FLASK_ENV") != "testing":
+    from dotenv import load_dotenv
+    load_dotenv()
 
-def create_app():
+
+def create_app(config_class=None):
     app = Flask(__name__)
+    # app.config.from_object(os.getenv('FLASK_ENV', 'development'))
+    app.config.from_object(config_class or os.getenv("FLASK_CONFIG") or DevelopmentConfig)
 
     # Configure SQLAlchemy
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
