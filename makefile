@@ -1,7 +1,11 @@
 # Variables
 DOCKER_COMPOSE_TEST = docker compose --env-file ./server/.env.test -f docker-compose.test.yml
+DOCKER_COMPOSE_DEV = docker compose -f docker-compose.dev.yml
 TEST_SERVICE = backend-test
 
+# ===============================
+# TESTING COMMANDS
+# ===============================
 .PHONY: build
 build:
 	@echo "🔨 Building test containers..."
@@ -45,3 +49,33 @@ rebuild:
 	make down
 	make build
 	make test
+
+# ===============================
+# DEVELOPMENT COMMANDS
+# ===============================
+.PHONY: dev-build
+dev-build:
+	@echo "🔨 Building development containers..."
+	$(DOCKER_COMPOSE_DEV) build
+
+.PHONY: dev-up
+dev-up:
+	@echo "🚀 Starting development environment..."
+	$(DOCKER_COMPOSE_DEV) up -d
+
+.PHONY: dev-down
+dev-down:
+	@echo "🛑 Stopping and cleaning up development containers..."
+	$(DOCKER_COMPOSE_DEV) down -v
+
+.PHONY: dev-logs
+dev-logs:
+	@echo "📜 Showing logs..."
+	$(DOCKER_COMPOSE_DEV) logs -f
+
+.PHONY: dev-rebuild
+dev-rebuild:
+	@echo "♻️ Rebuilding and starting development containers..."
+	make dev-down
+	make dev-build
+	make dev-up
