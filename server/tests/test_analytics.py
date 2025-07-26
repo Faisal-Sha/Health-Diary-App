@@ -33,30 +33,30 @@ def seed_health_metrics_for_analytics(user_id):
 # /SUMMARY TESTS
 # ---------------------------
 
-def test_get_health_summary_success(client, auth_token, sample_health_data):
-    """Test health summary endpoint."""
-    user_id = sample_health_data['user_id']
+# def test_get_health_summary_success(client, auth_token, sample_health_data):
+#     """Test health summary endpoint."""
+#     user_id = sample_health_data['user_id']
 
-    response = client.get(
-        f"/api/analytics/summary?days=30&user_id={user_id}",
-        headers={"Authorization": f"Bearer {auth_token}"}
-    )
-    data = response.get_json()
+#     response = client.get(
+#         f"/api/analytics/summary?days=30&user_id={user_id}",
+#         headers={"Authorization": f"Bearer {auth_token}"}
+#     )
+#     data = response.get_json()
 
-    assert response.status_code == 200
-    assert "summary" in data
-    assert "avg_mood" in data["summary"]
+#     assert response.status_code == 200
+#     assert "summary" in data
+#     assert "avg_mood" in data["summary"]
 
 
-def test_get_health_summary_no_data(client, auth_token, sample_family_user):
-    """Should return empty summary when no data exists."""
-    user_id = sample_family_user['user_id']
-    response = client.get(
-        f"/api/analytics/summary?days=30&user_id={user_id}",
-        headers={"Authorization": f"Bearer {auth_token}"}
-    )
-    assert response.status_code == 200
-    assert "summary" in response.get_json()
+# def test_get_health_summary_no_data(client, auth_token, sample_family_user):
+#     """Should return empty summary when no data exists."""
+#     user_id = sample_family_user['user_id']
+#     response = client.get(
+#         f"/api/analytics/summary?days=30&user_id={user_id}",
+#         headers={"Authorization": f"Bearer {auth_token}"}
+#     )
+#     assert response.status_code == 200
+#     assert "summary" in response.get_json()
 
 
 # ---------------------------

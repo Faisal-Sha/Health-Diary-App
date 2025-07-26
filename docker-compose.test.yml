@@ -9,7 +9,7 @@ services:
     depends_on:
       - db-test
     volumes:
-      - ./test-reports:/app/reports
+      - ./server/test-reports:/app/reports
 
   db-test:
     image: postgres:15

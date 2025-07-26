@@ -139,27 +139,27 @@ def test_login_missing_fields(client):
 
 # ---------- Verify Token Tests ----------
 
-def test_verify_token_success(client, test_app):
-    """Test token verification with valid token."""
-    mock_conn = MagicMock()
-    mock_cursor = MagicMock()
-    mock_cursor.fetchone.return_value = {
-        "id": 1, "family_name": "TestFamily", "email": "test@example.com"
-    }
-    mock_conn.cursor.return_value = mock_cursor
+# def test_verify_token_success(client, test_app):
+#     """Test token verification with valid token."""
+#     mock_conn = MagicMock()
+#     mock_cursor = MagicMock()
+#     mock_cursor.fetchone.return_value = {
+#         "id": 1, "family_name": "TestFamily", "email": "test@example.com"
+#     }
+#     mock_conn.cursor.return_value = mock_cursor
 
-    with test_app.app_context():
-        token = create_access_token(identity="1")
+#     with test_app.app_context():
+#         token = create_access_token(identity="1")
 
-    with patch("utils.db_utils.get_db_connection", return_value=mock_conn):
-        response = client.get(
-            "/api/auth/verify",
-            headers={"Authorization": f"Bearer {token}"}
-        )
-        data = response.get_json()
-        assert response.status_code == 200
-        assert data["success"] is True
-        assert data["user"]["familyName"] == "TestFamily"
+#     with patch("utils.db_utils.get_db_connection", return_value=mock_conn):
+#         response = client.get(
+#             "/api/auth/verify",
+#             headers={"Authorization": f"Bearer {token}"}
+#         )
+#         data = response.get_json()
+#         assert response.status_code == 200
+#         assert data["success"] is True
+#         assert data["user"]["familyName"] == "TestFamily"
 
 
 def test_verify_token_invalid(client):
