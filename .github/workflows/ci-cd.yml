@@ -28,7 +28,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
-          path: server/reports
+          path: server/test-reports
 
   deploy:
     name: Deploy to Production
@@ -59,6 +59,7 @@ jobs:
           username: ${{ secrets.DO_SERVER_USER }}
           key: ${{ secrets.DO_SERVER_SSH_KEY }}
           script: |
-            cd /path/to/your/deployment
+            cd /home/health-diary/
             docker pull sakjin/health-diary:latest
-            docker compose up -d
+            docker pull sakjin/health-diary-frontend:latest
+            docker compose -f docker-compose.prod.yml up -d frontend backend
