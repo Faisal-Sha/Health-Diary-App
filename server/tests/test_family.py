@@ -17,7 +17,7 @@ def seed_family_and_user():
         VALUES ('TestFamily', 'family@test.com', 'hash', NOW())
         RETURNING id
     """)
-    family_id = cursor.fetchone()[0]
+    family_id = cursor.fetchone()['id']
     
     # Insert test admin user
     cursor.execute("""
@@ -25,7 +25,7 @@ def seed_family_and_user():
         VALUES (%s, 'admin', 'Admin', '👑', '#6c5ce7', 'admin', NOW())
         RETURNING id
     """, (family_id,))
-    user_id = cursor.fetchone()[0]
+    user_id = cursor.fetchone()['id']
     
     conn.commit()
     conn.close()
@@ -37,20 +37,21 @@ def seed_family_and_user():
 # GET PROFILES TESTS
 # ---------------------------
 
-def test_get_family_profiles_success(client, auth_token):
-    family_id, user_id = seed_family_and_user()
-
+def test_get_family_profiles_success(client, auth_token, sample_family_user):
     response = client.get(
         "/api/family/profiles",
         headers={"Authorization": f"Bearer {auth_token}"}
     )
     data = response.get_json()
     
-    # Expecting at least one profile (the admin user we seeded)
+    # Expecting at least one profile (the user from our fixture)
     assert response.status_code == 200
     assert isinstance(data, list)
-    assert data[0]["username"] == "admin"
+    assert len(data) >= 1
     assert "healthScore" in data[0]
+    # Check that our test user is in the results
+    usernames = [profile["username"] for profile in data]
+    assert any(sample_family_user['user_id'] == profile["id"] for profile in data)
 
 
 def test_get_family_profiles_no_token(client):
@@ -62,9 +63,7 @@ def test_get_family_profiles_no_token(client):
 # CREATE PROFILE TESTS
 # ---------------------------
 
-def test_create_family_profile_success(client, auth_token):
-    family_id, user_id = seed_family_and_user()
-    
+def test_create_family_profile_success(client, auth_token, sample_family_user):
     response = client.post(
         "/api/family/profiles",
         data=json.dumps({
@@ -82,8 +81,7 @@ def test_create_family_profile_success(client, auth_token):
     assert data["profile"]["name"] == "John"
 
 
-def test_create_family_profile_missing_name(client, auth_token):
-    seed_family_and_user()
+def test_create_family_profile_missing_name(client, auth_token, sample_family_user):
     
     response = client.post(
         "/api/family/profiles",
@@ -95,8 +93,8 @@ def test_create_family_profile_missing_name(client, auth_token):
     assert "Name is required" in response.get_json()["error"]
 
 
-def test_create_family_profile_duplicate_name(client, auth_token):
-    family_id, user_id = seed_family_and_user()
+def test_create_family_profile_duplicate_name(client, auth_token, sample_family_user):
+    family_id = sample_family_user['family_id']
     
     # Create first user "Alex"
     conn = get_db_connection()
@@ -123,8 +121,8 @@ def test_create_family_profile_duplicate_name(client, auth_token):
 # UPDATE PROFILE TESTS
 # ---------------------------
 
-def test_update_family_profile_success(client, auth_token):
-    family_id, user_id = seed_family_and_user()
+def test_update_family_profile_success(client, auth_token, sample_family_user):
+    user_id = sample_family_user['user_id']
     
     response = client.put(
         f"/api/family/profiles/{user_id}",
@@ -139,8 +137,7 @@ def test_update_family_profile_success(client, auth_token):
     assert data["profile"]["name"] == "UpdatedAdmin"
 
 
-def test_update_family_profile_not_found(client, auth_token):
-    seed_family_and_user()
+def test_update_family_profile_not_found(client, auth_token, sample_family_user):
     response = client.put(
         "/api/family/profiles/999",
         data=json.dumps({"name": "NewName"}),
@@ -154,18 +151,20 @@ def test_update_family_profile_not_found(client, auth_token):
 # DELETE PROFILE TESTS
 # ---------------------------
 
-def test_delete_family_profile_success(client, auth_token):
-    family_id, user_id = seed_family_and_user()
+def test_delete_family_profile_success(client, auth_token, sample_family_user):
+    family_id = sample_family_user['family_id']
     
-    # Add a non-admin user to delete
+    # Add a non-admin user to delete (use unique username)
+    import uuid
+    unique_username = f"john-{uuid.uuid4().hex[:8]}"
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO users (family_id, username, display_name, avatar, color, role, last_active)
-        VALUES (%s, 'john', 'John', '😀', '#000', 'user', NOW())
+        VALUES (%s, %s, 'John', '😀', '#000', 'user', NOW())
         RETURNING id
-    """, (family_id,))
-    delete_user_id = cursor.fetchone()[0]
+    """, (family_id, unique_username))
+    delete_user_id = cursor.fetchone()['id']
     conn.commit()
     conn.close()
     
@@ -179,13 +178,13 @@ def test_delete_family_profile_success(client, auth_token):
     assert "deleted successfully" in data["message"]
 
 
-def test_delete_family_profile_only_admin_blocked(client, auth_token):
-    family_id, user_id = seed_family_and_user()
+def test_delete_family_profile_only_admin_blocked(client, admin_auth_token, admin_family_user):
+    user_id = admin_family_user['user_id']
     
     # Attempt to delete the only admin
     response = client.delete(
         f"/api/family/profiles/{user_id}",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {admin_auth_token}"}
     )
     assert response.status_code == 400
     assert "Cannot delete the only admin user" in response.get_json()["error"]

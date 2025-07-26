@@ -3,41 +3,15 @@ from unittest.mock import patch
 from utils.db_utils import get_db_connection
 
 
-def seed_family_user_for_entries():
-    """Seed a family and user for entry tests."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    # Insert family
-    cursor.execute("""
-        INSERT INTO families (family_name, email, password_hash, created_at)
-        VALUES ('EntryFamily', 'entry@test.com', 'hash', NOW())
-        RETURNING id
-    """)
-    family_id = cursor.fetchone()['id']
-
-    # Insert user
-    cursor.execute("""
-        INSERT INTO users (family_id, username, display_name, avatar, color, role, last_active)
-        VALUES (%s, 'entry_user', 'Entry User', '😀', '#000000', 'user', NOW())
-        RETURNING id
-    """, (family_id,))
-    user_id = cursor.fetchone()['id']
-
-    conn.commit()
-    conn.close()
-    return family_id, user_id
-
-
 # ---------------------------
 # CREATE ENTRY TESTS
 # ---------------------------
 
 @patch("routes.entry_routes.extract_health_data_with_ai")
-def test_create_entry_success(mock_ai, client, auth_token):
+def test_create_entry_success(mock_ai, client, auth_token, sample_family_user):
     """Test successful diary entry creation."""
     mock_ai.return_value = {"mood_score": 7, "energy_level": 5, "confidence": 0.9}
-    _, user_id = seed_family_user_for_entries()
+    user_id = sample_family_user['user_id']
 
     response = client.post(
         "/api/entries",
@@ -53,9 +27,9 @@ def test_create_entry_success(mock_ai, client, auth_token):
     assert data["ai_confidence"] == 0.9
 
 
-def test_create_entry_missing_text(client, auth_token):
+def test_create_entry_missing_text(client, auth_token, sample_family_user):
     """Entry creation should fail when text is empty."""
-    _, user_id = seed_family_user_for_entries()
+    user_id = sample_family_user['user_id']
 
     response = client.post(
         "/api/entries",
@@ -71,9 +45,9 @@ def test_create_entry_missing_text(client, auth_token):
 # GET ENTRIES TESTS
 # ---------------------------
 
-def test_get_entries_success(client, auth_token):
+def test_get_entries_success(client, auth_token, sample_family_user):
     """Fetch entries for a user."""
-    _, user_id = seed_family_user_for_entries()
+    user_id = sample_family_user['user_id']
 
     # Insert a sample entry
     conn = get_db_connection()
@@ -98,7 +72,7 @@ def test_get_entries_success(client, auth_token):
     assert any(e["id"] == entry_id for e in data["entries"])
 
 
-def test_get_entries_missing_user_id(client, auth_token):
+def test_get_entries_missing_user_id(client, auth_token, sample_family_user):
     response = client.get(
         "/api/entries",
         headers={"Authorization": f"Bearer {auth_token}"}
@@ -112,10 +86,10 @@ def test_get_entries_missing_user_id(client, auth_token):
 # ---------------------------
 
 @patch("routes.entry_routes.extract_health_data_with_ai")
-def test_update_entry_success(mock_ai, client, auth_token):
+def test_update_entry_success(mock_ai, client, auth_token, sample_family_user):
     """Update an existing entry."""
     mock_ai.return_value = {"mood_score": 8, "energy_level": 7, "confidence": 0.8}
-    _, user_id = seed_family_user_for_entries()
+    user_id = sample_family_user['user_id']
 
     # Insert a sample entry
     conn = get_db_connection()
@@ -142,7 +116,7 @@ def test_update_entry_success(mock_ai, client, auth_token):
     assert data["ai_confidence"] == 0.8
 
 
-def test_update_entry_not_found(client, auth_token):
+def test_update_entry_not_found(client, auth_token, sample_family_user):
     response = client.put(
         "/api/entries/999",
         data=json.dumps({"text": "Updated text"}),
@@ -156,8 +130,8 @@ def test_update_entry_not_found(client, auth_token):
 # DELETE ENTRY TESTS
 # ---------------------------
 
-def test_delete_entry_success(client, auth_token):
-    _, user_id = seed_family_user_for_entries()
+def test_delete_entry_success(client, auth_token, sample_family_user):
+    user_id = sample_family_user['user_id']
 
     # Insert entry
     conn = get_db_connection()
@@ -179,7 +153,7 @@ def test_delete_entry_success(client, auth_token):
     assert "deleted successfully" in response.get_json()["message"]
 
 
-def test_delete_entry_not_found(client, auth_token):
+def test_delete_entry_not_found(client, auth_token, sample_family_user):
     response = client.delete(
         "/api/entries/999",
         headers={"Authorization": f"Bearer {auth_token}"}
@@ -191,8 +165,8 @@ def test_delete_entry_not_found(client, auth_token):
 # BULK DELETE TESTS
 # ---------------------------
 
-def test_bulk_delete_entries_success(client, auth_token):
-    _, user_id = seed_family_user_for_entries()
+def test_bulk_delete_entries_success(client, auth_token, sample_family_user):
+    user_id = sample_family_user['user_id']
 
     # Insert two entries
     conn = get_db_connection()

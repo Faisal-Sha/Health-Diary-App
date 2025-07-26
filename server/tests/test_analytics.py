@@ -33,11 +33,9 @@ def seed_health_metrics_for_analytics(user_id):
 # /SUMMARY TESTS
 # ---------------------------
 
-def test_get_health_summary_success(client, auth_token):
+def test_get_health_summary_success(client, auth_token, sample_health_data):
     """Test health summary endpoint."""
-    # Seed data
-    _, user_id = seed_family_user()
-    seed_health_metrics_for_analytics(user_id)
+    user_id = sample_health_data['user_id']
 
     response = client.get(
         f"/api/analytics/summary?days=30&user_id={user_id}",
@@ -50,9 +48,9 @@ def test_get_health_summary_success(client, auth_token):
     assert "avg_mood" in data["summary"]
 
 
-def test_get_health_summary_no_data(client, auth_token):
+def test_get_health_summary_no_data(client, auth_token, sample_family_user):
     """Should return empty summary when no data exists."""
-    _, user_id = seed_family_user()
+    user_id = sample_family_user['user_id']
     response = client.get(
         f"/api/analytics/summary?days=30&user_id={user_id}",
         headers={"Authorization": f"Bearer {auth_token}"}

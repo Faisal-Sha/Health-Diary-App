@@ -139,7 +139,7 @@ def test_login_missing_fields(client):
 
 # ---------- Verify Token Tests ----------
 
-def test_verify_token_success(client):
+def test_verify_token_success(client, test_app):
     """Test token verification with valid token."""
     mock_conn = MagicMock()
     mock_cursor = MagicMock()
@@ -148,7 +148,8 @@ def test_verify_token_success(client):
     }
     mock_conn.cursor.return_value = mock_cursor
 
-    token = create_access_token(identity="1")
+    with test_app.app_context():
+        token = create_access_token(identity="1")
 
     with patch("utils.db_utils.get_db_connection", return_value=mock_conn):
         response = client.get(
@@ -169,9 +170,10 @@ def test_verify_token_invalid(client):
 
 # ---------- Logout Tests ----------
 
-def test_logout(client):
+def test_logout(client, test_app):
     """Test logout endpoint."""
-    token = create_access_token(identity="1")
+    with test_app.app_context():
+        token = create_access_token(identity="1")
     response = client.post(
         "/api/auth/logout",
         headers={"Authorization": f"Bearer {token}"}
