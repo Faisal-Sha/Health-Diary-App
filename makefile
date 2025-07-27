@@ -71,7 +71,7 @@ dev-down:
 .PHONY: dev-logs
 dev-logs:
 	@echo "📜 Showing logs..."
-	$(DOCKER_COMPOSE_DEV) logs -f
+	$(DOCKER_COMPOSE_DEV) logs -f backend
 
 .PHONY: dev-rebuild
 dev-rebuild:

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './FileImport.css';
+import apiService from '../services/apiService';
 const BASE_URL = process.env.REACT_APP_API_URL;
 
 function FileImport({ onImportComplete }) {
@@ -9,6 +10,7 @@ function FileImport({ onImportComplete }) {
     const [selectedFile, setSelectedFile] = useState(null);
     const [previewData, setPreviewData] = useState(null);
     const [showTemplates, setShowTemplates] = useState(false);
+    const [error, setError] = useState('');
 
     const supportedFormats = {
         csv: { 
@@ -299,21 +301,18 @@ Amazing day! Exercise really helped boost my mood and energy. Sleeping well cons
 
     // Process plain text file
     const processTextFile = async (file) => {
-        const text = await readFileAsText(file);
-        
-        // Send entire text to backend bulk import endpoint
-        const response = await fetch(`${BASE_URL}/entries/bulk-import`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: text })
-        });
-
-        const result = await response.json();
-        if (!result.success) {
-            throw new Error(result.error || 'Failed to process text file');
+        try {
+            const text = await readFileAsText(file);
+            
+            // Send entire text to backend bulk import endpoint
+            const response = await apiService.bulkImportEntries({text});
+            return response.processed_entries || [];
+        } catch (error) {
+            console.error('Text file processing error:', error);
+            const errorMsg = error.response?.data?.error || 'Failed to process text file';
+            setError(errorMsg);
+            return [];
         }
-
-        return result.processed_entries || [];
     };
 
     // Process Excel file (placeholder - would need SheetJS library)
@@ -333,15 +332,7 @@ Amazing day! Exercise really helped boost my mood and energy. Sleeping well cons
         // Send entries one by one to the regular create endpoint
         for (const entry of entries) {
             try {
-                const response = await fetch(`${BASE_URL}/entries`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        text: entry.text,
-                        date: entry.date
-                    })
-                });
-
+                const response = await apiService.createEntry(entry.text, entry.date);
                 if (!response.ok) {
                     console.error(`Failed to import entry for ${entry.date}`);
                 }

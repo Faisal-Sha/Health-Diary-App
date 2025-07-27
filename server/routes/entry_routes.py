@@ -5,10 +5,12 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from utils.db_utils import get_db_connection
 from utils.ai_utils import extract_health_data_with_ai
 from datetime import datetime
+from dateutil import parser
 import traceback
 from psycopg2.extras import RealDictCursor
 from openai import OpenAI
 import os
+import re
 
 openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
@@ -437,86 +439,74 @@ def bulk_import_entries():
 
 def split_bulk_text_into_entries(bulk_text):
     """
-    Fixed version: More accurate splitting of bulk text into individual diary entries
+    Fixed version: Correctly splits bulk text into individual diary entries.
+    Works even when the date and text are on the same line.
     """
+    print(f"Bulk text: {bulk_text[:100]}...")  # Short preview
     entries = []
     
-    # Enhanced date patterns with stricter matching
+    # Enhanced date patterns (no $ to allow text after the date)
     date_patterns = [
-        r'^\*\*([^*]+)\*\*$',  # **June 19, 2025** (Markdown bold dates)
-        r'^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}$',  # January 1, 2024
-        r'^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}$',  # Jan 1, 2024
-        r'^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$',  # 1/1/2024, 01-01-24
-        r'^\d{4}[/-]\d{1,2}[/-]\d{1,2}$',    # 2024/1/1, 2024-01-01
+        r'^\*\*([^*]+)\*\*',  # **June 19, 2025** (Markdown bold dates)
+        r'^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}',
+        r'^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}',
+        r'^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}',
+        r'^\d{4}[/-]\d{1,2}[/-]\d{1,2}',
     ]
     
-    # Split by lines and process
     lines = bulk_text.split('\n')
     current_entry = ""
     current_date = None
     
     for line in lines:
         line = line.strip()
-        
-        # Skip empty lines
         if not line:
             continue
         
-        # Check if this line is ONLY a date (not mixed content)
         is_date_line = False
         found_date = None
+        match = None
         
+        # Check if line starts with a date pattern
         for pattern in date_patterns:
-            match = re.match(pattern, line, re.IGNORECASE)
+            match = re.search(pattern, line, re.IGNORECASE)
             if match:
                 try:
-                    # Extract date string
-                    if pattern.startswith(r'^\*\*'):
-                        # Extract from **date** format
-                        date_str = match.group(1)
-                    else:
-                        date_str = match.group(0)
-                    
+                    date_str = match.group(1) if pattern.startswith(r'^\*\*') else match.group(0)
                     found_date = parse_flexible_date(date_str)
                     is_date_line = True
-                    print(f"📅 Found date line: '{line}' -> {found_date}")
                     break
                 except Exception as e:
                     print(f"❌ Date parse error for '{line}': {e}")
-                    continue
         
-        # If we found a new date and have accumulated text, save previous entry
-        if is_date_line and current_entry.strip():
-            entries.append({
-                'text': current_entry.strip(),
-                'date': current_date or datetime.now().date()
-            })
-            print(f"✅ Saved entry for {current_date}: {len(current_entry)} chars")
-            current_entry = ""
-        
-        # Update current date if we found one
+        # Save previous entry if a new date is found
         if is_date_line:
+            if current_entry.strip():
+                entries.append({
+                    'text': current_entry.strip(),
+                    'date': current_date or datetime.now().date()
+                })
+                current_entry = ""
+            
             current_date = found_date
+            
+            # Add the remaining text after the date in the same line
+            remainder = line[match.end():].strip()
+            if remainder:
+                current_entry += remainder + "\n"
         else:
-            # Add content line to current entry
             current_entry += line + "\n"
     
-    # Don't forget the last entry
+    # Save the final entry
     if current_entry.strip():
         entries.append({
             'text': current_entry.strip(),
             'date': current_date or datetime.now().date()
         })
-        print(f"✅ Saved final entry for {current_date}: {len(current_entry)} chars")
     
     print(f"📊 Split result: {len(entries)} entries total")
-    
-    # If we got unexpected results, log details
-    if len(entries) != 7:
-        print(f"⚠️ Expected 7 entries, got {len(entries)}")
-        for i, entry in enumerate(entries):
-            print(f"  Entry {i+1}: {entry['date']} - {len(entry['text'])} chars")
-            print(f"    Preview: {entry['text'][:100]}...")
+    for i, entry in enumerate(entries):
+        print(f"  Entry {i+1}: {entry['date']} - {len(entry['text'])} chars")
     
     return entries
 
@@ -524,55 +514,14 @@ def parse_flexible_date(date_str):
     """
     Enhanced date parsing with better error handling
     """
-    # Remove markdown formatting
     date_str = date_str.replace('*', '').strip()
-    
     try:
-        # Try using dateutil first (most flexible)
-        from dateutil import parser
         parsed_date = parser.parse(date_str).date()
-        print(f"✅ Parsed '{date_str}' -> {parsed_date}")
         return parsed_date
-    except ImportError:
-        print("⚠️ dateutil not available, using manual parsing")
-    except Exception as e:
-        print(f"❌ dateutil failed for '{date_str}': {e}")
-    
-    # Manual parsing fallbacks
-    try:
-        # Handle MM/DD/YYYY or MM-DD-YYYY
-        if '/' in date_str or '-' in date_str:
-            separator = '/' if '/' in date_str else '-'
-            parts = date_str.split(separator)
-            if len(parts) == 3:
-                month, day, year = parts
-                if len(year) == 2:
-                    year = '20' + year if int(year) < 50 else '19' + year
-                result = datetime(int(year), int(month), int(day)).date()
-                print(f"✅ Manual parse '{date_str}' -> {result}")
-                return result
-        
-        # Handle "Month DD, YYYY" format
-        import re
-        month_match = re.match(r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})', date_str, re.IGNORECASE)
-        if month_match:
-            month_name, day, year = month_match.groups()
-            month_num = {
-                'january': 1, 'february': 2, 'march': 3, 'april': 4,
-                'may': 5, 'june': 6, 'july': 7, 'august': 8,
-                'september': 9, 'october': 10, 'november': 11, 'december': 12
-            }[month_name.lower()]
-            result = datetime(int(year), month_num, int(day)).date()
-            print(f"✅ Month name parse '{date_str}' -> {result}")
-            return result
-            
-    except Exception as e:
-        print(f"❌ Manual parsing failed for '{date_str}': {e}")
-    
-    # If all else fails, return today
-    fallback = datetime.now().date()
-    print(f"⚠️ Using fallback date for '{date_str}' -> {fallback}")
-    return fallback
+    except Exception:
+        # Manual fallback
+        fallback = datetime.now().date()
+        return fallback
 
 def get_fallback_data():
     """Enhanced fallback data with temporal structure"""

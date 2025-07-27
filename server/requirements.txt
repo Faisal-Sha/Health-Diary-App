@@ -34,4 +34,4 @@ SQLAlchemy==2.0.41
 pytest
 pytest-flask
 pytest-cov
-faker
+python-dateutil

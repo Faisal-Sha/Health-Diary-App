@@ -134,6 +134,19 @@ class ApiService {
     }
   }
 
+  // Bulk import diary entries
+  async bulkImportEntries(entries) {
+    try {
+      const response = await this.api.post('/entries/bulk-import', entries);
+      const result = await this.handleResponse(response);
+      console.log('✅ Bulk import completed:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Failed to bulk import entries:', error);
+      throw error;
+    }
+  }
+
   // Get health analytics summary
   async getHealthSummary(selectedProfile, days = 30) {
     try {
