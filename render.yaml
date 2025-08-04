@@ -2,7 +2,7 @@ services:
   - name: health-diary-backend
     type: web
     env: docker
-    repo: https://github.com/your-username/your-repo-name
+    repo: https://github.com/Faisal-Sha/Health-Diary-App.git
     dockerContext: ./server
     dockerfilePath: ./server/Dockerfile
     plan: free
@@ -24,7 +24,7 @@ services:
   - name: health-diary-frontend
     type: web
     env: docker
-    repo: https://github.com/your-username/your-repo-name
+    repo: https://github.com/Faisal-Sha/Health-Diary-App.git
     dockerContext: ./client
     dockerfilePath: ./client/Dockerfile
     plan: free
@@ -36,7 +36,7 @@ services:
   - name: health-diary-db
     type: worker
     env: docker
-    repo: https://github.com/your-username/your-repo-name
+    repo: https://github.com/Faisal-Sha/Health-Diary-App.git
     dockerContext: .
     dockerfilePath: ./docker/db.Dockerfile
     plan: free
