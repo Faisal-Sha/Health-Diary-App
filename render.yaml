@@ -32,19 +32,3 @@ services:
       - key: REACT_APP_API_URL
         value: https://health-diary-backend.onrender.com/api
     autoDeploy: true
-
-  - name: health-diary-db
-    type: worker
-    env: docker
-    repo: https://github.com/Faisal-Sha/Health-Diary-App.git
-    dockerContext: .
-    dockerfilePath: ./docker/db.Dockerfile
-    plan: free
-    envVars:
-      - key: POSTGRES_USER
-        value: username
-      - key: POSTGRES_PASSWORD
-        value: password
-      - key: POSTGRES_DB
-        value: health_app
-    autoDeploy: true
