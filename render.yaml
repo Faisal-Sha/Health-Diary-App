@@ -34,7 +34,7 @@ services:
     autoDeploy: true
 
   - name: health-diary-db
-    type: private-service
+    type: background
     env: docker
     repo: https://github.com/your-username/your-repo-name
     dockerContext: .
