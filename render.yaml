@@ -1,0 +1,54 @@
+services:
+  - name: health-diary-backend
+    type: web
+    env: docker
+    repo: https://github.com/your-username/your-repo-name
+    dockerContext: ./server
+    dockerfilePath: ./server/Dockerfile
+    plan: free
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false  # Add this in Render Dashboard
+      - key: DATABASE_URL
+        value: postgresql://username:password@health-diary-db:5432/health_app
+      - key: JWT_SECRET_KEY
+        sync: false  # Add this in Render Dashboard
+      - key: FLASK_PORT
+        value: 5000
+      - key: FLASK_DEBUG
+        value: false
+      - key: FLASK_CONFIG
+        value: config.ProductionConfig
+    autoDeploy: true
+
+  - name: health-diary-frontend
+    type: web
+    env: docker
+    repo: https://github.com/your-username/your-repo-name
+    dockerContext: ./client
+    dockerfilePath: ./client/Dockerfile
+    plan: free
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://health-diary-backend.onrender.com/api
+    autoDeploy: true
+
+  - name: health-diary-db
+    type: private-service
+    env: docker
+    repo: https://github.com/your-username/your-repo-name
+    dockerContext: .
+    dockerfilePath: ./docker/db.Dockerfile
+    plan: free
+    envVars:
+      - key: POSTGRES_USER
+        value: username
+      - key: POSTGRES_PASSWORD
+        value: password
+      - key: POSTGRES_DB
+        value: health_app
+    persistentDisk:
+      name: db-storage
+      mountPath: /var/lib/postgresql/data
+      sizeGB: 5
+    autoDeploy: true
