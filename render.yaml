@@ -34,7 +34,7 @@ services:
     autoDeploy: true
 
   - name: health-diary-db
-    type: background
+    type: worker
     env: docker
     repo: https://github.com/your-username/your-repo-name
     dockerContext: .
