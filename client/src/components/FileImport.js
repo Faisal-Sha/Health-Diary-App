@@ -64,47 +64,47 @@ function FileImport({ onImportComplete, selectedProfile }) {
     };
 
     const handleFileImport = async () => {
-        if (!selectedFile || !selectedProfile) return;
-    
-        const ext = selectedFile.name.split('.').pop().toLowerCase();
-        setIsProcessing(true);
-        setUploadProgress(0);
-    
-        let progress = 0;
-        const progressInterval = setInterval(() => {
-            progress += 10;
-            setUploadProgress((prev) => (prev < 90 ? prev + 10 : prev));
-        }, 200);
-    
-        try {
-            const rawText = await readFileAsText(selectedFile);
-            let textPayload = '';
-    
-            if (ext === 'txt') {
-                textPayload = rawText;
-            } else if (ext === 'csv') {
-                const entries = parseCSV(rawText);
-                textPayload = entriesToBulkText(entries);
-            } else if (ext === 'json') {
-                const entries = parseJSON(rawText);
-                textPayload = entriesToBulkText(entries);
-            } else {
-                throw new Error('Unsupported format');
-            }
-    
-            await apiService.bulkImportEntries({ text: textPayload, user_id: selectedProfile.id });
-    
-            setUploadProgress(100);
-            alert(`✅ Successfully imported entries from ${selectedFile.name}`);
-            if (onImportComplete) onImportComplete();
-        } catch (err) {
-            console.error('Import failed:', err);
-            alert(`❌ Import failed: ${err.message}`);
-        } finally {
-            clearInterval(progressInterval);
-            setIsProcessing(false);
+    if (!selectedFile || !selectedProfile) return;
+
+    const ext = selectedFile.name.split('.').pop().toLowerCase();
+    setIsProcessing(true);
+    setUploadProgress(0);
+
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+        progress += 10;
+        setUploadProgress((prev) => (prev < 90 ? prev + 10 : prev));
+    }, 200);
+
+    try {
+        const rawText = await readFileAsText(selectedFile);
+        let textPayload = '';
+
+        if (ext === 'txt') {
+            textPayload = rawText;
+        } else if (ext === 'csv') {
+            const entries = parseCSV(rawText);
+            textPayload = entriesToBulkText(entries);
+        } else if (ext === 'json') {
+            const entries = parseJSON(rawText);
+            textPayload = entriesToBulkText(entries);
+        } else {
+            throw new Error('Unsupported format');
         }
-    };    
+
+        await apiService.bulkImportEntries({ text: textPayload, user_id: selectedProfile.id });
+
+        setUploadProgress(100);
+        alert(`✅ Successfully imported entries from ${selectedFile.name}`);
+        if (onImportComplete) onImportComplete();
+    } catch (err) {
+        console.error('Import failed:', err);
+        alert(`❌ Import failed: ${err.message}`);
+    } finally {
+        clearInterval(progressInterval);
+        setIsProcessing(false);
+    }
+};
 
     const parseCSV = (text) => {
         const lines = text.split('\n').filter(l => l.trim());
@@ -175,7 +175,7 @@ function FileImport({ onImportComplete, selectedProfile }) {
                 <div className="preview-box">
                     <p><strong>File:</strong> {previewData.name}</p>
                     <p><strong>Size:</strong> {previewData.size}</p>
-                    <pre>{previewData.snippet}</pre>
+                    <pre style={{ overflowX: 'auto' }}>{previewData.snippet}</pre>
                 </div>
             )}
 
