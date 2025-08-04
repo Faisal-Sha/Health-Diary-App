@@ -60,12 +60,12 @@ function DeveloperTools({ onImportData, currentEntries, allEntries, onDataImport
                         </p>
                     </div>
                     <div className="tool-content">
-                        <FileImport onImportComplete={onDataImported} />
+                        <FileImport onImportComplete={onDataImported} selectedProfile={selectedProfile} />
                     </div>
                 </div>
                 
                 {/* Demo Data Import Section */}
-                <div className="tool-section">
+                {/* <div className="tool-section">
                     <div className="tool-header">
                         <h3 className="tool-title">🎭 Demo Data Import</h3>
                         <p className="tool-description">
@@ -80,10 +80,10 @@ function DeveloperTools({ onImportData, currentEntries, allEntries, onDataImport
                             selectedProfile={selectedProfile}
                         />
                     </div>
-                </div>
+                </div> */}
 
                 {/* Bulk Text Import Section */}
-                <div className="tool-section">
+                {/* <div className="tool-section">
                     <div className="tool-header">
                         <h3 className="tool-title">📝 Bulk Text Import</h3>
                         <p className="tool-description">
@@ -93,7 +93,7 @@ function DeveloperTools({ onImportData, currentEntries, allEntries, onDataImport
                     <div className="tool-content">
                         <BulkTextImport onImportComplete={onDataImported} selectedProfile={selectedProfile}/>
                     </div>
-                </div>
+                </div> */}
 
                 {/* Database Management Section */}
                 <div className="tool-section full-width">

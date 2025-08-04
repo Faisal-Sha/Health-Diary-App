@@ -1,0 +1,29 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies required for psycopg2 and testing
+RUN apt-get update && apt-get install -y \
+    gcc \
+    python3-dev \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install testing dependencies
+RUN pip install --no-cache-dir pytest pytest-flask pytest-cov pytest-html pytest-json-report
+
+# Copy application code
+COPY . .
+
+# Copy test entrypoint script
+COPY docker-entrypoint.test.sh /app/docker-entrypoint.test.sh
+RUN chmod +x /app/docker-entrypoint.test.sh
+
+ENTRYPOINT ["/app/docker-entrypoint.test.sh"]
+
+# Default command to run tests with comprehensive reporting
+CMD ["--maxfail=5", "--tb=short", "--strict-markers", "--strict-config", "--html=reports/test-report.html", "--self-contained-html", "--json-report", "--json-report-file=reports/test-report.json", "--cov-report=html:reports/coverage", "--cov-report=term-missing", "--cov-report=json:reports/coverage.json", "-v"]

@@ -3,3 +3,36 @@ docker run -it -d --rm -p 5000:5000 backend-health:1.0
 docker build -t backend-health:1.0 .
 
 docker buildx build --platform linux/amd64 -t sakjin/health-diary:latest --push .
+
+
+# 1. Initialize if not already
+docker compose -f docker-compose.dev.yml exec backend flask db init
+
+# 2. Generate migration
+docker compose -f docker-compose.dev.yml exec backend flask db migrate -m "Add created_at to raw_entries"
+
+# 3. Apply migration
+docker compose -f docker-compose.dev.yml exec backend flask db upgrade
+
+# This will show the SQL migration without touching your DB.
+docker compose -f docker-compose.dev.yml exec backend flask db migrate --sql
+
+# Tell Alembic: "this schema already exists — don’t try to create/drop it."
+docker compose -f docker-compose.dev.yml exec backend flask db stamp head
+
+
+
+docker push sakjin/health-diary:latest
+docker push sakjin/health-diary-frontend:latest
+
+cd server/ && docker build -t sakjin/health-diary:latest -f Dockerfile.prod .
+
+cd client/ && docker build -t sakjin/health-diary-frontend:latest -f Dockerfile.prod .
+
+
+# Connect to the database
+docker compose -f docker-compose.dev.yml exec db psql -U username -d health_app
+
+
+# Run tests
+docker compose -f docker-compose.test.yml up --build --abort-on-container-exit

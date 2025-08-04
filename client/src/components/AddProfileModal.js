@@ -44,19 +44,16 @@ const AddProfileModal = ({ onClose, onProfileAdded }) => {
     try {
       const response = await authenticatedFetch(`${BASE_URL}/family/profiles`, {
         method: 'POST',
-        body: JSON.stringify(formData)
+        data: formData,
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        onProfileAdded(result.profile);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to create profile');
-      }
+      const result = response.data;
+      onProfileAdded(result.profile);
+      
     } catch (error) {
       console.error('Error creating profile:', error);
-      setError('Failed to create profile. Please try again.');
+      const errorMsg = error.response?.data?.error || 'Failed to create profile. Please try again.';
+      setError(errorMsg);
     } finally {
       setIsLoading(false);
     }

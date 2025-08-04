@@ -1,10 +1,39 @@
 //handles all communication with flask backend
 
+import axios from 'axios';
 const BASE_URL = process.env.REACT_APP_API_URL;
 
 class ApiService {
   constructor() {
     this.authToken = null;
+
+    this.api = axios.create({
+      baseURL: BASE_URL,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    // Request interceptor
+    this.api.interceptors.request.use((config) => {
+      if (this.authToken) {
+        config.headers.Authorization = `Bearer ${this.authToken}`;
+      }
+      return config;
+    });
+
+    // Response interceptor
+    this.api.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          this.authToken = null;
+          window.dispatchEvent(new CustomEvent('auth-expired'));
+          throw new Error('Session expired. Please log in again.');
+        }
+        return Promise.reject(error);
+      }
+    );
     
     // Listen for auth events from AuthContext
     window.addEventListener('auth-expired', () => {
@@ -34,23 +63,13 @@ class ApiService {
 
   // Helper method to handle HTTP responses
   async handleResponse(response) {
-    if (!response.ok) {
-      if (response.status === 401) {
-        // Token expired - trigger logout
-        this.authToken = null;
-        window.dispatchEvent(new CustomEvent('auth-expired'));
-        throw new Error('Session expired. Please log in again.');
-      }
-      const errorData = await response.json().catch(() => ({ error: 'Network error' }));
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
+    return response.data;
   }
 
   // Test if backend is running
   async healthCheck() {
     try {
-      const response = await fetch(`${BASE_URL}/health`);
+      const response = await this.api.get('/health');
       return await this.handleResponse(response);
     } catch (error) {
       console.error('Health check failed:', error);
@@ -73,11 +92,7 @@ class ApiService {
 
       console.log('📤 Sending entry to backend:', requestBody);
 
-      const response = await fetch(`${BASE_URL}/entries`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify(requestBody)
-      });
+      const response = await this.api.post('/entries', requestBody);
 
       const result = await this.handleResponse(response);
       console.log('✅ Entry saved successfully:', result);
@@ -107,9 +122,7 @@ class ApiService {
       
       console.log('📥 Fetching entries from:', url);
 
-      const response = await fetch(url, {
-        headers: this.getAuthHeaders()
-      });
+      const response = await this.api.get(url);
       
       const result = await this.handleResponse(response);
       console.log(`✅ Fetched ${result.entries.length} entries`);
@@ -117,6 +130,19 @@ class ApiService {
       
     } catch (error) {
       console.error('❌ Failed to fetch entries:', error);
+      throw error;
+    }
+  }
+
+  // Bulk import diary entries
+  async bulkImportEntries(entries) {
+    try {
+      const response = await this.api.post('/entries/bulk-import', entries);
+      const result = await this.handleResponse(response);
+      console.log('✅ Bulk import completed:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Failed to bulk import entries:', error);
       throw error;
     }
   }
@@ -132,9 +158,7 @@ class ApiService {
       params.append('user_id', selectedProfile.id);
       params.append('days', days.toString());
 
-      const response = await fetch(`${BASE_URL}/analytics/weekly-summary?${params.toString()}`, {
-        headers: this.getAuthHeaders()
-      });
+      const response = await this.api.get(`/analytics/weekly-summary?${params.toString()}`);
       
       const result = await this.handleResponse(response);
       console.log('📊 Health summary fetched:', result);
@@ -311,10 +335,8 @@ class ApiService {
     try {
       console.log(`✏️ Updating entry ${entryId}...`);
       
-      const response = await fetch(`${BASE_URL}/entries/${entryId}`, {
-        method: 'PUT',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({ text: newText })
+      const response = await this.api.put(`/entries/${entryId}`, {
+        text: newText
       });
   
       const result = await this.handleResponse(response);
@@ -332,10 +354,7 @@ class ApiService {
     try {
       console.log(`🗑️ Deleting entry ${entryId}...`);
       
-      const response = await fetch(`${BASE_URL}/entries/${entryId}`, {
-        method: 'DELETE',
-        headers: this.getAuthHeaders()
-      });
+      const response = await this.api.delete(`/entries/${entryId}`);
 
       const result = await this.handleResponse(response);
       console.log('✅ Entry deleted successfully:', result);
@@ -356,10 +375,8 @@ class ApiService {
 
       console.log(`🚨 Clearing ALL entries for ${selectedProfile.name}...`);
       
-      const response = await fetch(`${BASE_URL}/entries/clear-all`, {
-        method: 'DELETE',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({ user_id: selectedProfile.id })
+      const response = await this.api.delete(`/entries/clear-all`, {
+        data: { user_id: selectedProfile.id }
       });
 
       const result = await this.handleResponse(response);
@@ -377,10 +394,8 @@ class ApiService {
     try {
       console.log(`🗑️ Bulk deleting ${entryIds.length} entries...`);
       
-      const response = await fetch(`${BASE_URL}/entries/bulk-delete`, {
-        method: 'DELETE',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({ entry_ids: entryIds })
+      const response = await this.api.delete(`/entries/bulk-delete`, {
+        data: { entry_ids: entryIds }
       });
 
       const result = await this.handleResponse(response);

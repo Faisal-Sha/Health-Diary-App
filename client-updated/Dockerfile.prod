@@ -1,0 +1,24 @@
+# Frontend Dockerfile for React CRA
+FROM node:20-slim AS build
+
+# set working directory
+WORKDIR /app
+
+# install deps
+COPY package.json package-lock.json* pnpm-lock.yaml* ./
+RUN npm install --legacy-peer-deps --silent
+
+# copy source
+COPY . .
+
+# build
+RUN npm run build
+
+# production image
+FROM nginx:alpine
+COPY --from=build /app/build /usr/share/nginx/html
+
+# expose port
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

@@ -7,5 +7,20 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
+ENV FLASK_ENV=production
+ENV FLASK_APP=app.py
+ENV FLASK_DEBUG=false
+ENV FLASK_CONFIG=config.ProductionConfig
+ENV PYTHONUNBUFFERED=1
+
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+
 EXPOSE 5000
+
+# CMD ["sh", "-c", "python init_db.py && gunicorn --bind 0.0.0.0:5000 app:app"]
+# CMD ["sh", "-c", "flask db upgrade && gunicorn --bind 0.0.0.0:5000 app:app"]
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+

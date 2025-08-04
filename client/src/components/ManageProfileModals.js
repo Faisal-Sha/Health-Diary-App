@@ -61,25 +61,22 @@ const ManageProfileModals = ({ onClose, profiles, onProfileUpdated, onProfileDel
         `${BASE_URL}/family/profiles/${editingProfile.id}`, 
         {
           method: 'PUT',
-          body: JSON.stringify({
+          data: {
             name: editingProfile.name.trim(),
             avatar: editingProfile.avatar,
             color: editingProfile.color
-          })
+          }
         }
       );
 
-      if (response.ok) {
-        const result = await response.json();
-        onProfileUpdated(result.profile);
-        setEditingProfile(null);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to update profile');
-      }
+      const result = response.data;
+      onProfileUpdated(result.profile);
+      setEditingProfile(null);
+      
     } catch (error) {
       console.error('Error updating profile:', error);
-      setError('Failed to update profile. Please try again.');
+      const errorMsg = error.response?.data?.error || 'Failed to update profile. Please try again.';
+      setError(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -110,19 +107,15 @@ const ManageProfileModals = ({ onClose, profiles, onProfileUpdated, onProfileDel
           method: 'DELETE'
         }
       );
-
-      if (response.ok) {
-        const result = await response.json();
-        onProfileDeleted(profile.id);
-        // Show success message briefly
-        alert(`✅ ${profile.name}'s profile has been deleted successfully.`);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to delete profile');
-      }
+    
+      const result = response.data;
+      onProfileDeleted(profile.id);
+      alert(`✅ ${profile.name}'s profile has been deleted successfully.`);
     } catch (error) {
       console.error('Error deleting profile:', error);
-      setError('Failed to delete profile. Please try again.');
+      const errorMsg =
+        error.response?.data?.error || 'Failed to delete profile. Please try again.';
+      setError(errorMsg);
     } finally {
       setIsLoading(false);
     }

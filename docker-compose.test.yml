@@ -1,0 +1,33 @@
+version: "3.9"
+services:
+  backend-test:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.test  # This is your new test Dockerfile
+    env_file:
+      - ./server/.env.test
+    depends_on:
+      - db-test
+    volumes:
+      - ./server/test-reports:/app/reports
+
+  db-test:
+    image: postgres:15
+    container_name: health-diary-db-test
+    restart: always
+    environment:
+      POSTGRES_USER: username
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: health_app_test
+    ports:
+      - "5433:5432" # To avoid conflict with your dev db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U username -d health_app_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - db_test_data:/var/lib/postgresql/data
+
+volumes:
+  db_test_data:
