@@ -89,10 +89,64 @@ def create_entry():
     finally:
         if 'conn' in locals(): conn.close()
 
+@entry_bp.route('/all', methods=['GET'])
+@jwt_required()
+def get_all_entries():
+    try:
+        family_id = get_jwt_identity()
+        page = int(request.args.get('page', 1))
+        page_size = int(request.args.get('page_size', 20))
+        offset = (page - 1) * page_size
+
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        # Total count for pagination
+        cursor.execute('''
+            SELECT COUNT(*) FROM raw_entries re
+            JOIN users u ON re.user_id = u.id
+            WHERE u.family_id = %s
+        ''', (family_id,))
+        total = cursor.fetchone()['count']
+        total_pages = (total + page_size - 1) // page_size
+
+        # Paginated entries
+        cursor.execute('''
+            SELECT re.id, re.entry_text as text, re.entry_date, re.created_at,
+                   re.user_id, u.display_name as member_name,
+                   hm.mood_score, hm.energy_level, hm.pain_level, 
+                   hm.sleep_quality, hm.sleep_hours, hm.stress_level, 
+                   hm.ai_confidence
+            FROM raw_entries re
+            JOIN users u ON re.user_id = u.id
+            LEFT JOIN health_metrics hm ON re.id = hm.raw_entry_id
+            WHERE u.family_id = %s
+            ORDER BY re.created_at DESC
+            LIMIT %s OFFSET %s
+        ''', (family_id, page_size, offset))
+
+        entries = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            "entries": entries,
+            "pagination": {
+                "page": page,
+                "page_size": page_size,
+                "total": total,
+                "total_pages": total_pages
+            }
+        })
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": "Failed to fetch entries", "details": str(e)}), 500
+
 
 @entry_bp.route('', methods=['GET'])
 @jwt_required()
-def get_entries():
+def get_member_entries():
     try:
         family_id = get_jwt_identity()
         user_id = request.args.get('user_id')
@@ -113,7 +167,7 @@ def get_entries():
             return jsonify({"error": "Invalid user profile"}), 403
 
         query = """
-            SELECT re.id, re.entry_text, re.entry_date, re.created_at,
+            SELECT re.id, re.entry_text as text, re.entry_date, re.created_at,
                    hm.mood_score, hm.energy_level, hm.pain_level, 
                    hm.sleep_quality, hm.sleep_hours, hm.stress_level, 
                    hm.ai_confidence
@@ -1040,3 +1094,106 @@ ENHANCED ANALYSIS GUIDELINES:
 If information is not mentioned or unclear, use null for numbers and empty arrays for lists."""
 
     return base_prompt
+
+
+
+# used in the new frontend
+@entry_bp.route('/bulk-import/new', methods=['POST'])
+@jwt_required()
+def bulk_import_entry():
+    try:
+        family_id = get_jwt_identity()
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        user_id = request.form.get('user_id') or request.json.get('user_id')
+        file = request.files.get('file')
+        file_type = request.form.get('file_type') or 'txt'
+        text_data = request.json.get('text') if not file else None
+
+        if not user_id:
+            return jsonify({"success": False, "message": "user_id is required"}), 400
+
+        cursor.execute("SELECT id FROM users WHERE id = %s AND family_id = %s", (user_id, family_id))
+        if not cursor.fetchone():
+            return jsonify({"success": False, "message": "Invalid user profile"}), 403
+
+        entries = []
+
+        # 📁 File upload (txt or csv)
+        if file:
+            content = file.read().decode('utf-8')
+
+            if file_type == 'csv':
+                import csv
+                from io import StringIO
+                reader = csv.reader(StringIO(content))
+                for row in reader:
+                    if row:
+                        entries.append(row[0].strip())
+            else:  # txt
+                entries = [line.strip() for line in content.splitlines() if line.strip()]
+
+        # 📄 Raw JSON text
+        elif text_data:
+            entries = [line.strip() for line in text_data.strip().split('\n') if line.strip()]
+
+        else:
+            return jsonify({"success": False, "message": "No data provided"}), 400
+
+        if not entries:
+            return jsonify({"success": False, "message": "No valid entries found"}), 400
+
+        from server.analysis.openai_analysis import analyze_entry  # adjust if path differs
+        inserted_count = 0
+
+        for entry_text in entries:
+            try:
+                # Insert into raw_entries
+                cursor.execute(
+                    """INSERT INTO raw_entries (entry_text, entry_date, user_id, created_at)
+                       VALUES (%s, CURRENT_DATE, %s, CURRENT_TIMESTAMP)
+                       RETURNING id""",
+                    (entry_text, user_id)
+                )
+                raw_entry_id = cursor.fetchone()['id']
+
+                # Run AI analysis
+                metrics = analyze_entry(entry_text)
+
+                # Insert into health_metrics
+                cursor.execute(
+                    """INSERT INTO health_metrics (
+                        raw_entry_id, mood_score, energy_level, pain_level,
+                        sleep_quality, sleep_hours, stress_level, ai_confidence
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                    (
+                        raw_entry_id,
+                        metrics.get("mood_score"),
+                        metrics.get("energy_level"),
+                        metrics.get("pain_level"),
+                        metrics.get("sleep_quality"),
+                        metrics.get("sleep_hours"),
+                        metrics.get("stress_level"),
+                        metrics.get("ai_confidence"),
+                    )
+                )
+                inserted_count += 1
+
+            except Exception as e:
+                print(f"❌ Error processing entry: {e}")
+                continue
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "processed": inserted_count
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "message": "Internal error", "details": str(e)}), 500

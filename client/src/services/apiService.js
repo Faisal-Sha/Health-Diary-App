@@ -135,9 +135,9 @@ class ApiService {
   }
 
   // Bulk import diary entries
-  async bulkImportEntries(entries) {
+  async bulkImportEntries(entries, user_id) {
     try {
-      const response = await this.api.post('/entries/bulk-import', entries);
+      const response = await this.api.post('/entries/bulk-import', entries, { user_id });
       const result = await this.handleResponse(response);
       console.log('✅ Bulk import completed:', result);
       return result;
