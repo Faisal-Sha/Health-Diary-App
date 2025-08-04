@@ -47,7 +47,7 @@ services:
         value: password
       - key: POSTGRES_DB
         value: health_app
-    persistentDisk:
+    disk:
       name: db-storage
       mountPath: /var/lib/postgresql/data
       sizeGB: 5
