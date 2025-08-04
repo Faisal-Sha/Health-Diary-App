@@ -10,7 +10,7 @@ services:
       - key: OPENAI_API_KEY
         sync: false  # Add this in Render Dashboard
       - key: DATABASE_URL
-        value: postgresql://username:password@health-diary-db:5432/health_app
+        sync: false 
       - key: JWT_SECRET_KEY
         sync: false  # Add this in Render Dashboard
       - key: FLASK_PORT
