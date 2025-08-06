@@ -19,7 +19,7 @@ services:
         value: false
       - key: FLASK_CONFIG
         value: config.ProductionConfig
-    autoDeploy: true
+    autoDeploy: false
 
   - name: health-diary-frontend
     type: web
@@ -31,4 +31,4 @@ services:
     envVars:
       - key: REACT_APP_API_URL
         value: https://health-diary-backend.onrender.com/api
-    autoDeploy: true
+    autoDeploy: false
