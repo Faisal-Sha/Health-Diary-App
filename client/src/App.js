@@ -134,7 +134,7 @@ function AppContent() {
       // Create a backend-style entry object
       const backendStyleEntry = {
         id: result.entry_id,
-        entry_text: diaryText,
+        text: diaryText,
         entry_date: new Date().toISOString().split('T')[0], // "2024-06-06" format
         created_at: new Date().toISOString(),
         mood_score: result.ai_extracted_data?.mood_score,

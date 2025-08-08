@@ -30,13 +30,11 @@ function DiaryEntry({entry, deleteEntry, viewMode = 'list', onEntryUpdated}) {
         return `${Math.round(confidence * 100)}%`;
     };
     const handleStartEdit = () => {
-        console.log('✏️ Starting edit for entry:', entry.id);
         setIsEditing(true);
         setEditText(entry.text); // Pre-populate with current text
     };
 
     const handleCancelEdit = () => {
-        console.log('❌ Cancelling edit');
         setIsEditing(false);
         setEditText('');
     };
@@ -56,7 +54,6 @@ function DiaryEntry({entry, deleteEntry, viewMode = 'list', onEntryUpdated}) {
     
         try {
             setIsLoading(true);
-            console.log('💾 Saving edited entry:', entry.id);
     
             // Send to backend for update
             const result = await apiService.updateEntry(entry.id, editText.trim());

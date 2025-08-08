@@ -196,12 +196,9 @@ class ApiService {
     const createdDate = new Date(backendEntry.created_at);
     const entryDate = backendEntry.entry_date;
     
-    console.log('📅 Entry date from backend:', entryDate);
-    console.log('📅 Created date from backend:', backendEntry.created_at);
-    
     const convertedEntry = {
       id: backendEntry.id,
-      text: backendEntry.entry_text,
+      text: backendEntry.text,
       date: this.formatDateForReact(entryDate), // Convert to your expected format
       time: createdDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
       
