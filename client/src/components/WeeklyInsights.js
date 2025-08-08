@@ -38,7 +38,6 @@ function WeeklyInsights({ lastEntryTimestamp, entries, selectedProfile }) {
         try {
             localStorage.setItem(getCacheKey(), JSON.stringify(data));
             localStorage.setItem(getTimestampKey(), timestamp.toString());
-            console.log('✅ AI insights cached successfully');
         } catch (error) {
             console.error('Error saving cache:', error);
         }
@@ -52,16 +51,13 @@ function WeeklyInsights({ lastEntryTimestamp, entries, selectedProfile }) {
         const cached = getCachedData();
         
         if (!cached) {
-            console.log('🔄 No cache found, fetching fresh data...');
             return true;
         }
 
         if (lastEntryTimestamp && lastEntryTimestamp > cached.cacheTimestamp) {
-            console.log('🔄 New diary entries detected, refreshing insights...');
             return true;
         }
 
-        console.log('✅ Using cached AI insights (no new entries)');
         return false;
     };
 
@@ -73,10 +69,7 @@ function WeeklyInsights({ lastEntryTimestamp, entries, selectedProfile }) {
     };
 
     const loadWeeklySummary = async (forceRefresh = false) => {
-        console.log('🔄 loadWeeklySummary called, forceRefresh:', forceRefresh);
-
         if (!selectedProfile) {
-            console.log('❌ No profile selected for WeeklyInsights');
             setError('Please select a profile to view insights');
             return;
         }
@@ -96,25 +89,12 @@ function WeeklyInsights({ lastEntryTimestamp, entries, selectedProfile }) {
         setIsUsingCache(false);
 
         try {
-            console.log('🚀 Fetching fresh weekly insights from API...');
-            
             const data = await apiService.getHealthSummary(selectedProfile, 30);
-            
-            
-            console.log('📊 Weekly insights API response:', data);
-            
             const now = new Date().toLocaleString();
-            
             setSummaryData(data);
             setLastUpdated(now);
-            
-            // Cache the successful result
             setCachedData(data, Date.now());
-            
-            console.log('✅ Weekly insights loaded and cached successfully');
-            
         } catch (error) {
-            console.error('❌ Failed to load weekly insights:', error);
             setError(error.message);
         } finally {
             setIsLoading(false);
@@ -123,13 +103,10 @@ function WeeklyInsights({ lastEntryTimestamp, entries, selectedProfile }) {
 
     useEffect(() => {
         if (selectedProfile) {
-            // Clear previous data when switching profiles
             setSummaryData(null);
             setLastUpdated(null);
             setIsUsingCache(false);
             setError(null);
-            
-            // Load data for new profile
             loadWeeklySummary();
         }
     }, [selectedProfile?.id, lastEntryTimestamp]);
@@ -145,13 +122,11 @@ function WeeklyInsights({ lastEntryTimestamp, entries, selectedProfile }) {
             setSummaryData(null);
             setLastUpdated(null);
             setIsUsingCache(false);
-            console.log('🗑️ Cache cleared');
         } catch (error) {
             console.error('Error clearing cache:', error);
         }
     };
 
-    // Helper function to safely format numbers
     const formatMetricValue = (value, scale = "") => {
         if (value === null || value === undefined || isNaN(value)) {
             return { number: "N/A", scale: "" };
@@ -174,7 +149,6 @@ function WeeklyInsights({ lastEntryTimestamp, entries, selectedProfile }) {
         );
     }
 
-    // Loading state
     if (isLoading) {
         return (
             <div className="analytics-dashboard">
@@ -191,7 +165,6 @@ function WeeklyInsights({ lastEntryTimestamp, entries, selectedProfile }) {
         );
     }
 
-    // Error state
     if (error && !summaryData) {
         return (
             <div className="analytics-dashboard">

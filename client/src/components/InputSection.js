@@ -36,26 +36,20 @@ function InputSection({diaryText, onTextChange, onSaveEntry, isLoading = false, 
           };
             
           recognitionRef.current.onend = () => {
-            console.log("🎤 Recognition ended. isRecording:", isRecording);
     
             if (isRecording) {
-              console.log("🔄 Restarting recognition...");
               setTimeout(() => {
                 if (recognitionRef.current && isRecording) {
                   try {
                     recognitionRef.current.start();
                   } catch (error) {
-                    console.log("❌ Failed to restart:", error);
                   }
                 }
               }, 100);
-            } else {
-              console.log("✅ Not restarting - recording is stopped");
             }
           }
     
           recognitionRef.current.onerror = (event) => {
-            console.log('Speech recognition error:', event.error);
             if (event.error === 'no-speech' && isRecording) {
               setTimeout(() => {
                 if (recognitionRef.current && isRecording) {
@@ -71,7 +65,6 @@ function InputSection({diaryText, onTextChange, onSaveEntry, isLoading = false, 
       }, []);
 
     function startRecording() {
-        console.log("🎬 Starting recording...");
         if (recognitionRef.current && !disabled) {
           setIsProcessing(true);
           setIsRecording(true);
@@ -82,20 +75,17 @@ function InputSection({diaryText, onTextChange, onSaveEntry, isLoading = false, 
     }
     
     function stopRecording() {
-        console.log("🛑 Stopping recording...");
         setIsRecording(false);
         setIsProcessing(false);
         if (recognitionRef.current) {
           try {
             recognitionRef.current.stop();
-            console.log("✅ Recording stopped successfully");
             
             setTimeout(() => {
               onTextChange(accumulatedText.trim());
             }, 100);
             
           } catch (error) {
-            console.log("❌ Error stopping recording:", error);
           }
         }
     }

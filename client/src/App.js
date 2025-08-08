@@ -44,10 +44,8 @@ function AppContent() {
     const token = getAuthToken();
     if (token) {
       apiService.setAuthToken(token);
-      console.log('🔑 Auth token synced with apiService');
     } else {
       apiService.setAuthToken(null);
-      console.log('🔓 Auth token cleared from apiService');
     }
   }, [user, getAuthToken]);
 
@@ -57,10 +55,8 @@ function AppContent() {
       try {
         await apiService.healthCheck();
         setBackendStatus('connected');
-        console.log('✅ Backend connected successfully');
       } catch (error) {
         setBackendStatus('disconnected');
-        console.error('❌ Backend connection failed:', error);
         setError('Cannot connect to backend server. Please make sure Flask is running on port 5000.');
       }
     };
@@ -78,7 +74,6 @@ function AppContent() {
   // Function to load entries from backend
   const loadEntries = async () => {
     if (!selectedProfile) {
-      console.log('⏸️ No profile selected, skipping entry load');
       return;
     }
 
@@ -86,18 +81,14 @@ function AppContent() {
       setIsLoading(true);
       setError(null);
       
-      console.log('📥 Loading entries for profile:', selectedProfile.name);
-      
       const result = await apiService.getEntries(selectedProfile, { limit: 50 });
       
       // Convert backend format to your current React format
       const convertedEntries = result.entries.map(entry => apiService.convertBackendEntry(entry));
       
       setDiaryEntries(convertedEntries);
-      console.log(`✅ Loaded ${convertedEntries.length} entries from backend`);
       
     } catch (error) {
-      console.error('Failed to load entries:', error);
       setError('Failed to load diary entries. Please try again.');
     } finally {
       setIsLoading(false);
@@ -125,8 +116,6 @@ function AppContent() {
     try {
       setIsLoading(true);
       setError(null);
-
-      console.log('💾 Saving entry for profile:', selectedProfile.name);
 
       // Send to backend (with AI processing)
       const result = await apiService.createEntry(diaryText, selectedProfile, new Date().toISOString().split('T')[0]);
@@ -166,8 +155,6 @@ function AppContent() {
   };
 
   const handleEntryUpdated = (updatedEntry) => {
-    console.log('📝 Entry updated:', updatedEntry.id);
-    
     // Update the entry in our local state
     setDiaryEntries(diaryEntries.map(entry => 
       entry.id === updatedEntry.id ? updatedEntry : entry
@@ -213,54 +200,40 @@ function AppContent() {
       // Replace all entries (used by clear functions)
       setDiaryEntries(newEntries);
       if (newEntries.length === 0) {
-        console.log('🗑️ All data cleared!');
       } else {
-        console.log(`📊 Imported ${newEntries.length} entries`);
         setLastEntryTimestamp(Date.now());
       }
     } else {
       // Add new entries
       setDiaryEntries([...diaryEntries, ...newEntries]);
-      console.log(`📊 Added ${newEntries.length} new entries`);
       setLastEntryTimestamp(Date.now());
     }
   };
 
   // Get entries for a specific date (used by Calendar component)
   const getEntriesForDate = (date) => {
-    console.log('🔍 getEntriesForDate called with:', date);
-    console.log('📊 Current diaryEntries array:', diaryEntries);
     if (!selectedProfile) {
-      console.log('⚠️ No profile selected, returning empty array');
       return [];
     }
     
     const filteredEntries = diaryEntries.filter(entry => {
-      console.log(`Comparing entry.date "${entry.date}" with requested date "${date}"`);
       return entry.date === date;
     });
     
-    console.log(`✅ Found ${filteredEntries.length} entries for ${date}:`, filteredEntries);
     return filteredEntries;
   };
   
   // Get unique dates that have entries (used by Calendar component)
   const getDatesWithEntries = () => {
-    console.log('🔍 getDatesWithEntries called');
-    console.log('📊 Current diaryEntries array:', diaryEntries);
-    
     if (!selectedProfile) {
-      console.log('⚠️ No profile selected, returning empty array');
       return [];
     }
 
     const dates = diaryEntries.map(entry => {
-      console.log(`Entry date: "${entry.date}"`);
       return entry.date;
     });
     
     const uniqueDates = [...new Set(dates)];
-    console.log('📅 Unique dates found:', uniqueDates);
     return uniqueDates;
   };
 

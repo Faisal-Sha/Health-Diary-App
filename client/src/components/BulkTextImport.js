@@ -27,7 +27,6 @@ function BulkTextImport({ onImportComplete, selectedProfile }) {
         setIsProcessing(true);
         
         try {
-            console.log('🚀 Starting bulk text import...');
             
             const response = await authenticatedFetch(`${BASE_URL}/entries/bulk-import`, {
               method: 'POST',

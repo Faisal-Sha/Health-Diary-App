@@ -38,14 +38,12 @@ class ApiService {
     // Listen for auth events from AuthContext
     window.addEventListener('auth-expired', () => {
       this.authToken = null;
-      console.log('🔓 Auth token cleared due to expiration');
     });
   }
 
   // Set the auth token (called by AuthContext when user logs in)
   setAuthToken(token) {
     this.authToken = token;
-    console.log('🔑 Auth token set in ApiService');
   }
 
   // Get headers for authenticated requests
@@ -90,12 +88,9 @@ class ApiService {
         date: entryDate || new Date().toISOString().split('T')[0] // Use ISO date format
       };
 
-      console.log('📤 Sending entry to backend:', requestBody);
-
       const response = await this.api.post('/entries', requestBody);
 
       const result = await this.handleResponse(response);
-      console.log('✅ Entry saved successfully:', result);
       return result;
       
     } catch (error) {
@@ -120,12 +115,9 @@ class ApiService {
 
       const url = `${BASE_URL}/entries${params.toString() ? '?' + params.toString() : ''}`;
       
-      console.log('📥 Fetching entries from:', url);
-
       const response = await this.api.get(url);
       
       const result = await this.handleResponse(response);
-      console.log(`✅ Fetched ${result.entries.length} entries`);
       return result;
       
     } catch (error) {
@@ -139,7 +131,6 @@ class ApiService {
     try {
       const response = await this.api.post('/entries/bulk-import', entries);
       const result = await this.handleResponse(response);
-      console.log('✅ Bulk import completed:', result);
       return result;
     } catch (error) {
       console.error('❌ Failed to bulk import entries:', error);
@@ -161,11 +152,9 @@ class ApiService {
       const response = await this.api.get(`/analytics/weekly-summary?${params.toString()}`);
       
       const result = await this.handleResponse(response);
-      console.log('📊 Health summary fetched:', result);
       return result;
       
     } catch (error) {
-      console.error('❌ Failed to fetch health summary:', error);
       throw error;
     }
   }
@@ -190,7 +179,6 @@ class ApiService {
 
   // Convert backend entry format to your current React format
   convertBackendEntry(backendEntry) {
-    console.log('🔄 Converting backend entry:', backendEntry);
     
     // Create a proper Date object and format time
     const createdDate = new Date(backendEntry.created_at);
@@ -227,17 +215,14 @@ class ApiService {
       }
     };
     
-    console.log('✅ Converted entry:', convertedEntry);
     return convertedEntry;
   }
 
   // Format date to match your React component expectations
   formatDateForReact(dateString) {
-    console.log('🔄 formatDateForReact input:', dateString, 'type:', typeof dateString);
     
     // Handle null/undefined dates
     if (!dateString) {
-      console.log('❌ Date string is null/undefined, using today');
       return new Date().toLocaleDateString();
     }
     
@@ -252,15 +237,11 @@ class ApiService {
       date = new Date(dateString + 'T12:00:00');
     }
     
-    console.log('📅 Created date object:', date);
-    
     if (isNaN(date.getTime())) {
-      console.log('❌ Invalid date created, using today instead');
       return new Date().toLocaleDateString();
     }
     
     const formatted = date.toLocaleDateString();
-    console.log(`✅ Date conversion: "${dateString}" → "${formatted}"`);
     return formatted;
   }
 
@@ -281,7 +262,6 @@ class ApiService {
   // Update a specific entry - ADD this missing method
   async updateEntry(entryId, newText) {
     try {
-      console.log(`✏️ Updating entry ${entryId}...`);
       
       const response = await fetch(`${BASE_URL}/entries/${entryId}`, {
         method: 'PUT',
@@ -290,11 +270,9 @@ class ApiService {
       });
   
       const result = await this.handleResponse(response);
-      console.log('✅ Entry updated successfully:', result);
       return result;
       
     } catch (error) {
-      console.error('❌ Failed to update entry:', error);
       throw error;
     }
   }
@@ -330,18 +308,15 @@ class ApiService {
 
   async updateEntry(entryId, newText) {
     try {
-      console.log(`✏️ Updating entry ${entryId}...`);
       
       const response = await this.api.put(`/entries/${entryId}`, {
         text: newText
       });
   
       const result = await this.handleResponse(response);
-      console.log('✅ Entry updated successfully:', result);
       return result;
       
     } catch (error) {
-      console.error('❌ Failed to update entry:', error);
       throw error;
     }
   }
@@ -349,12 +324,10 @@ class ApiService {
   // Delete a specific entry
   async deleteEntry(entryId) {
     try {
-      console.log(`🗑️ Deleting entry ${entryId}...`);
       
       const response = await this.api.delete(`/entries/${entryId}`);
 
       const result = await this.handleResponse(response);
-      console.log('✅ Entry deleted successfully:', result);
       return result;
       
     } catch (error) {
@@ -369,19 +342,15 @@ class ApiService {
       if (!selectedProfile) {
         throw new Error('No profile selected');
       }
-
-      console.log(`🚨 Clearing ALL entries for ${selectedProfile.name}...`);
       
       const response = await this.api.delete(`/entries/clear-all`, {
         data: { user_id: selectedProfile.id }
       });
 
       const result = await this.handleResponse(response);
-      console.log('✅ All entries cleared successfully:', result);
       return result;
       
     } catch (error) {
-      console.error('❌ Failed to clear all entries:', error);
       throw error;
     }
   }
@@ -389,18 +358,15 @@ class ApiService {
   // Delete multiple entries at once
   async bulkDeleteEntries(entryIds) {
     try {
-      console.log(`🗑️ Bulk deleting ${entryIds.length} entries...`);
       
       const response = await this.api.delete(`/entries/bulk-delete`, {
         data: { entry_ids: entryIds }
       });
 
       const result = await this.handleResponse(response);
-      console.log('✅ Bulk delete successful:', result);
       return result;
       
     } catch (error) {
-      console.error('❌ Failed to bulk delete entries:', error);
       throw error;
     }
   }
