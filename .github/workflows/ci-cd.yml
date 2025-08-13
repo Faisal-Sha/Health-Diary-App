@@ -48,8 +48,11 @@ jobs:
       - name: Build and Push Docker Image
         run: |
           cd server
-          docker build -t sakjin/health-diary:latest -f Dockerfile .
+          docker build -t sakjin/health-diary:latest -f Dockerfile.prod .
           docker push sakjin/health-diary:latest
+          cd ../client
+          docker build -t sakjin/health-diary-frontend:latest -f Dockerfile.prod .
+          docker push sakjin/health-diary-frontend:latest
 
       # OPTIONAL: Uncomment when you want to auto-deploy to server
       - name: Deploy to DigitalOcean Server
