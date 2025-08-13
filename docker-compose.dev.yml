@@ -24,7 +24,7 @@ services:
     volumes:
       - ./server:/app
     env_file:
-      - ./server/.env
+      - ./server/.env.dev
     depends_on:
       - db
 

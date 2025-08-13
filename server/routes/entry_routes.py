@@ -3,14 +3,14 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from utils.db_utils import get_db_connection
-from utils.ai_utils import extract_health_data_with_ai
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil import parser
 import traceback
 from psycopg2.extras import RealDictCursor
 from openai import OpenAI
 import os
 import re
+import json
 
 openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
@@ -614,112 +614,113 @@ def get_fallback_data():
     }
 
 
-def extract_health_data_with_ai(diary_text, user_id=1, entry_date=None):
-    """Enhanced AI extraction with temporal context for delayed health effects"""
+# def extract_health_data_with_ai(diary_text, user_id=1, entry_date=None):
+#     """Enhanced AI extraction with temporal context for delayed health effects"""
     
-    # Get temporal context (last 2-3 days for delayed effects)
-    temporal_context = get_temporal_context(user_id, entry_date)
+#     # Get temporal context (last 2-3 days for delayed effects)
+#     temporal_context = get_temporal_context(user_id, entry_date)
     
-    # Build enhanced prompt with temporal awareness
-    enhanced_prompt = f"""You are a health data extraction specialist with expertise in temporal health patterns and delayed health effects.
+#     # Build enhanced prompt with temporal awareness
+#     enhanced_prompt = f"""You are a health data extraction specialist with expertise in temporal health patterns and delayed health effects.
 
-TEMPORAL CONTEXT (for identifying delayed effects):
-{format_temporal_context(temporal_context)}
+# TEMPORAL CONTEXT (for identifying delayed effects):
+# {format_temporal_context(temporal_context)}
 
-CURRENT DIARY ENTRY TO ANALYZE: "{diary_text}"
+# CURRENT DIARY ENTRY TO ANALYZE: "{diary_text}"
 
-CRITICAL TEMPORAL ANALYSIS GUIDELINES:
-- Look for delayed effects: food/activities from yesterday affecting today's symptoms
-- Consider timing: evening activities affecting next morning symptoms  
-- Track cumulative effects: repeated exposures building up over days
-- Identify trigger patterns: specific foods/activities consistently followed by symptoms
-- Consider sleep quality: how yesterday's events affected last night's sleep
+# CRITICAL TEMPORAL ANALYSIS GUIDELINES:
+# - Look for delayed effects: food/activities from yesterday affecting today's symptoms
+# - Consider timing: evening activities affecting next morning symptoms  
+# - Track cumulative effects: repeated exposures building up over days
+# - Identify trigger patterns: specific foods/activities consistently followed by symptoms
+# - Consider sleep quality: how yesterday's events affected last night's sleep
 
-SPECIFIC DELAYED EFFECT PATTERNS TO WATCH FOR:
-- Food consumed 3-8 hours ago causing digestive issues, headaches, or energy changes
-- High-fat foods (ghee, fried items) from previous evening causing morning headaches
-- Stressful events from yesterday affecting today's mood/energy
-- Physical strain from yesterday causing today's pain/stiffness
-- Late eating affecting sleep quality and next-day energy
+# SPECIFIC DELAYED EFFECT PATTERNS TO WATCH FOR:
+# - Food consumed 3-8 hours ago causing digestive issues, headaches, or energy changes
+# - High-fat foods (ghee, fried items) from previous evening causing morning headaches
+# - Stressful events from yesterday affecting today's mood/energy
+# - Physical strain from yesterday causing today's pain/stiffness
+# - Late eating affecting sleep quality and next-day energy
 
-Extract and return ONLY valid JSON in this exact format:
-{{
-  "mood_score": [1-10 number or null],
-  "energy_level": [1-10 number or null], 
-  "pain_level": [0-10 number or null],
-  "sleep_quality": [1-10 number or null],
-  "sleep_hours": [number of hours or null],
-  "stress_level": [0-10 number or null],
-  "symptoms": [array of strings or empty array],
-  "activities": [array of strings or empty array],
-  "food_intake": [array of strings or empty array],
-  "social_interactions": [string description or null],
-  "triggers": [array of potential trigger strings or empty array],
-  "medications": [array of strings or empty array],
-  "locations": [array of strings or empty array],
-  "confidence": [0.0-1.0 number indicating extraction confidence],
+# Extract and return ONLY valid JSON in this exact format:
+# {{
+#   "mood_score": [1-10 number or null],
+#   "energy_level": [1-10 number or null], 
+#   "pain_level": [0-10 number or null],
+#   "sleep_quality": [1-10 number or null],
+#   "sleep_hours": [number of hours or null],
+#   "stress_level": [0-10 number or null],
+#   "symptoms": [array of strings or empty array],
+#   "activities": [array of strings or empty array],
+#   "food_intake": [array of strings or empty array],
+#   "social_interactions": [string description or null],
+#   "triggers": [array of potential trigger strings or empty array],
+#   "medications": [array of strings or empty array],
+#   "locations": [array of strings or empty array],
+#   "confidence": [0.0-1.0 number indicating extraction confidence],
   
-  "temporal_analysis": {{
-    "delayed_food_effects": [
-      {{"food": "specific food", "consumed_when": "yesterday evening/this morning", "potential_symptom": "headache/nausea/energy_drop", "confidence": "low/medium/high"}}
-    ],
-    "cumulative_stress_effects": [
-      {{"stressor": "activity/situation", "building_since": "date", "current_impact": "description"}}
-    ],
-    "sleep_impact_from_yesterday": {{
-      "yesterday_factors_affecting_sleep": ["factors that influenced last night's sleep"],
-      "sleep_quality_correlation": "how yesterday impacted sleep"
-    }},
-    "physical_strain_carryover": {{
-      "yesterday_activities": ["physical activities from yesterday"],
-      "today_physical_effects": ["current pain/stiffness potentially from yesterday"]
-    }},
-    "pattern_recognition": {{
-      "repeated_food_symptom_pattern": "description of any recurring food-symptom timing",
-      "behavioral_health_pattern": "recurring activity-health outcome pattern",
-      "trigger_confidence_level": "low/medium/high based on pattern consistency"
-    }}
-  }}
-}}
+#   "temporal_analysis": {{
+#     "delayed_food_effects": [
+#       {{"food": "specific food", "consumed_when": "yesterday evening/this morning", "potential_symptom": "headache/nausea/energy_drop", "confidence": "low/medium/high"}}
+#     ],
+#     "cumulative_stress_effects": [
+#       {{"stressor": "activity/situation", "building_since": "date", "current_impact": "description"}}
+#     ],
+#     "sleep_impact_from_yesterday": {{
+#       "yesterday_factors_affecting_sleep": ["factors that influenced last night's sleep"],
+#       "sleep_quality_correlation": "how yesterday impacted sleep"
+#     }},
+#     "physical_strain_carryover": {{
+#       "yesterday_activities": ["physical activities from yesterday"],
+#       "today_physical_effects": ["current pain/stiffness potentially from yesterday"]
+#     }},
+#     "pattern_recognition": {{
+#       "repeated_food_symptom_pattern": "description of any recurring food-symptom timing",
+#       "behavioral_health_pattern": "recurring activity-health outcome pattern",
+#       "trigger_confidence_level": "low/medium/high based on pattern consistency"
+#     }}
+#   }}
+# }}
 
-SCORING GUIDELINES:
-- mood_score: 1=very depressed/sad, 5=neutral, 10=extremely happy/great
-- energy_level: 1=exhausted/no energy, 5=normal energy, 10=very energetic
-- pain_level: 0=no pain at all, 5=moderate pain, 10=severe/unbearable pain
-- sleep_quality: 1=terrible sleep/insomnia, 5=okay sleep, 10=excellent restful sleep
-- sleep_hours: actual number of hours slept
-- stress_level: 0=completely relaxed, 5=normal stress, 10=extremely stressed
+# SCORING GUIDELINES:
+# - mood_score: 1=very depressed/sad, 5=neutral, 10=extremely happy/great
+# - energy_level: 1=exhausted/no energy, 5=normal energy, 10=very energetic
+# - pain_level: 0=no pain at all, 5=moderate pain, 10=severe/unbearable pain
+# - sleep_quality: 1=terrible sleep/insomnia, 5=okay sleep, 10=excellent restful sleep
+# - sleep_hours: actual number of hours slept
+# - stress_level: 0=completely relaxed, 5=normal stress, 10=extremely stressed
 
-TEMPORAL CORRELATION INSTRUCTIONS:
-- If current symptoms match patterns from temporal context, note in delayed_food_effects
-- Consider timing: ghee/heavy fats 4-8 hours before symptoms = medium confidence correlation
-- Look for cumulative patterns: same trigger → same symptom across multiple days = high confidence
-- Note negative correlations: absence of usual triggers with absence of usual symptoms
-- Consider compound effects: multiple factors from yesterday contributing to today's state
+# TEMPORAL CORRELATION INSTRUCTIONS:
+# - If current symptoms match patterns from temporal context, note in delayed_food_effects
+# - Consider timing: ghee/heavy fats 4-8 hours before symptoms = medium confidence correlation
+# - Look for cumulative patterns: same trigger → same symptom across multiple days = high confidence
+# - Note negative correlations: absence of usual triggers with absence of usual symptoms
+# - Consider compound effects: multiple factors from yesterday contributing to today's state
 
-If information is not mentioned or unclear, use null for numbers and empty arrays for lists."""
+# If information is not mentioned or unclear, use null for numbers and empty arrays for lists."""
 
-    try:
-        response = openai_client.chat.completions.create(
-            model="gpt-4o",  # Use best model for complex temporal analysis
-            messages=[{"role": "user", "content": enhanced_prompt}],
-            temperature=0.1,
-            max_tokens=2000  # Allow more tokens for temporal analysis
-        )
+#     try:
+#         response = openai_client.chat.completions.create(
+#             model="gpt-4o",  # Use best model for complex temporal analysis
+#             messages=[{"role": "user", "content": enhanced_prompt}],
+#             temperature=0.1,
+#             max_tokens=2000  # Allow more tokens for temporal analysis
+#         )
         
-        ai_response = response.choices[0].message.content.strip()
+#         ai_response = response.choices[0].message.content.strip()
+#         print(f"AI response: {ai_response}")
         
-        # Clean up response
-        if ai_response.startswith('```json'):
-            ai_response = ai_response.strip('```json').strip('```')
-        elif ai_response.startswith('```'):
-            ai_response = ai_response.strip('```')
+#         # Clean up response
+#         if ai_response.startswith('```json'):
+#             ai_response = ai_response.strip('```json').strip('```')
+#         elif ai_response.startswith('```'):
+#             ai_response = ai_response.strip('```')
             
-        return json.loads(ai_response)
+#         return json.loads(ai_response)
     
-    except Exception as e:
-        print(f"AI processing error: {e}")
-        return get_fallback_data()
+#     except Exception as e:
+#         print(f"AI processing error: {e}")
+#         return get_fallback_data()
 
 
 def extract_health_data_with_ai(diary_text, user_id=1, entry_date=None):

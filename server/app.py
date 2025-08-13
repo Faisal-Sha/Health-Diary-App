@@ -14,17 +14,19 @@ if os.getenv("FLASK_ENV") != "testing":
 
 def create_app(config_class=None):
     app = Flask(__name__)
-    # app.config.from_object(os.getenv('FLASK_ENV', 'development'))
-    app.config.from_object(config_class or os.getenv("FLASK_CONFIG") or DevelopmentConfig)
+    # app.config.from_object(config_class or os.getenv("FLASK_CONFIG") or DevelopmentConfig)
+
+    config_obj = config_class or os.getenv("FLASK_CONFIG", "config.DevelopmentConfig")
+    app.config.from_object(config_obj)
 
     # Configure SQLAlchemy
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    # app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+    # app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    # JWT Configuration
-    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
-    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
-    app.config['JWT_ALGORITHM'] = 'HS256'
+    # # JWT Configuration
+    # app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
+    # app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
+    # app.config['JWT_ALGORITHM'] = 'HS256'
 
     # Initialize extensions
     db.init_app(app)
@@ -47,7 +49,7 @@ def create_app(config_class=None):
         print(f"❌ Missing token error: {error}")
         return jsonify({'error': 'Authorization token is required'}), 401
 
-    from models import User, Family, HealthMetric, RawEntry
+    # from models import User, Family, HealthMetric, RawEntry
 
     # Register blueprints
     from routes.auth_routes import register_auth_routes
