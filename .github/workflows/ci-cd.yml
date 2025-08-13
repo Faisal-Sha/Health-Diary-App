@@ -59,7 +59,27 @@ jobs:
           username: ${{ secrets.DO_SERVER_USER }}
           key: ${{ secrets.DO_SERVER_SSH_KEY }}
           script: |
+            set -e
             cd /home/health-diary/
+
+            # Write/refresh .env.prod from GitHub Secrets
+            cat > .env.prod << 'EOF'
+            CERTBOT_EMAIL=${{ secrets.PROD_CERTBOT_EMAIL }}
+            PRIMARY_DOMAIN=${{ secrets.PROD_PRIMARY_DOMAIN }}
+            WWW_DOMAIN=${{ secrets.PROD_WWW_DOMAIN }}
+
+            REACT_APP_API_URL=${{ secrets.PROD_REACT_APP_API_URL }}
+
+            OPENAI_API_KEY=${{ secrets.PROD_OPENAI_API_KEY }}
+            POSTGRES_USER=${{ secrets.PROD_DB_USER }}
+            POSTGRES_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}
+            POSTGRES_DB=${{ secrets.PROD_DB_NAME }}
+            JWT_SECRET_KEY=${{ secrets.PROD_JWT_SECRET }}
+            DATABASE_URL=postgresql://${{ secrets.PROD_DB_USER }}:${{ secrets.PROD_DB_PASSWORD }}@db/${{ secrets.PROD_DB_NAME }}
+            EOF
+            chmod 600 .env.prod
+
             docker pull sakjin/health-diary:latest
             docker pull sakjin/health-diary-frontend:latest
-            docker compose -f docker-compose.prod.yml up -d frontend backend
+
+            docker compose --env-file .env.prod -f docker-compose.prod.yml up -d frontend backend

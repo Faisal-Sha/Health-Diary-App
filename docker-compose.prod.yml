@@ -1,6 +1,5 @@
 version: "3.9"
 services:
-
   nginx:
     image: nginx:latest
     container_name: nginx-reverse-proxy
@@ -24,32 +23,27 @@ services:
       - ./nginx/certbot/www:/var/www/certbot
     entrypoint: >
       sh -c "certbot certonly --webroot --webroot-path=/var/www/certbot
-      --email faisal712000@gmail.com --agree-tos --no-eff-email
-      -d healthdiaryonline.com -d www.healthdiaryonline.com"
+      --email ${CERTBOT_EMAIL} --agree-tos --no-eff-email
+      -d ${PRIMARY_DOMAIN} -d ${WWW_DOMAIN}"
 
   frontend:
-    # build:
-    #   context: ./client
-    #   dockerfile: Dockerfile.prod
     image: sakjin/health-diary-frontend:latest
-    ports:
+    # Don’t publish container port to host – nginx will proxy to this network service
+    expose:
       - "80"
     environment:
-      - REACT_APP_API_URL=https://healthdiaryonline.com/api
+      - REACT_APP_API_URL=${REACT_APP_API_URL}
     depends_on:
       - backend
 
   backend:
-    # build:
-    #   context: ./server
-    #   dockerfile: Dockerfile.prod
     image: sakjin/health-diary:latest
     ports:
       - "5000:5000"
     environment:
-      - OPENAI_API_KEY=Rr8b7V3byZBRhPHrg
-      - DATABASE_URL=postgresql://username:password@db/health_app
-      - JWT_SECRET_KEY=56dafsad324fsafas789fadgafa
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - FLASK_PORT=5000
       - FLASK_DEBUG=false
     depends_on:
@@ -60,9 +54,9 @@ services:
     container_name: health-diary-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: username
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: health_app
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - db_data:/var/lib/postgresql/data
 
