@@ -11,6 +11,8 @@ from openai import OpenAI
 import os
 import re
 import json
+import threading
+import time
 
 openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
@@ -28,8 +30,8 @@ def create_entry():
     try:
         family_id = get_jwt_identity()
         data = request.get_json()
-        diary_text = data.get('text', '').strip()
-        entry_date = data.get('date', datetime.now().date().isoformat())
+        diary_text = (data.get('text') or '').strip()
+        entry_date = data.get('date') or datetime.now().date().isoformat()
         user_id = data.get('user_id')
 
         if not diary_text:
@@ -44,50 +46,44 @@ def create_entry():
 
         cursor.execute("SELECT id FROM users WHERE id = %s AND family_id = %s", (user_id, family_id))
         if not cursor.fetchone():
+            cursor.close(); conn.close()
             return jsonify({"error": "Invalid user profile"}), 403
 
-        print(f"🔄 Processing entry for user {user_id} on {entry_date}")
-        ai_data = extract_health_data_with_ai(diary_text, user_id, entry_date)
-
+        # 1) Insert RAW entry only
         cursor.execute("""
             INSERT INTO raw_entries (user_id, entry_text, entry_date, created_at)
             VALUES (%s, %s, %s, %s) RETURNING id
         """, (user_id, diary_text, entry_date, datetime.now()))
         raw_entry_id = cursor.fetchone()['id']
 
-        cursor.execute("""
-            INSERT INTO health_metrics (
-                user_id, raw_entry_id, entry_date, mood_score, energy_level,
-                pain_level, sleep_quality, sleep_hours, stress_level,
-                ai_confidence, created_at
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (
-            user_id, raw_entry_id, entry_date,
-            ai_data.get('mood_score'), ai_data.get('energy_level'),
-            ai_data.get('pain_level'), ai_data.get('sleep_quality'),
-            ai_data.get('sleep_hours'), ai_data.get('stress_level'),
-            ai_data.get('confidence', 0.0), datetime.now()
-        ))
-
+        # (optional) mark user last_active now
         cursor.execute("UPDATE users SET last_active = NOW() WHERE id = %s", (user_id,))
         conn.commit()
+        cursor.close(); conn.close()
 
+        # 2) Fire-and-forget AI processing
+        threading.Thread(
+            target=_process_entries_async,
+            args=([{
+                "raw_entry_id": raw_entry_id,
+                "user_id": user_id,
+                "entry_date": datetime.fromisoformat(entry_date).date() if isinstance(entry_date, str) else entry_date,
+                "entry_text": diary_text
+            }],),
+            daemon=True
+        ).start()
+
+        # 3) Return immediately
         return jsonify({
             "success": True,
             "entry_id": raw_entry_id,
-            "ai_confidence": ai_data.get('confidence', 0.0),
-            "temporal_insights": {
-                "delayed_effects_detected": len(ai_data.get('temporal_analysis', {}).get('delayed_food_effects', [])),
-                "pattern_confidence": ai_data.get('temporal_analysis', {}).get('pattern_recognition', {}).get('trigger_confidence_level', 'low')
-            },
-            "message": "Entry processed with temporal health analysis"
-        })
+            "status": "queued",              # client can show a 'processing…' badge
+            "message": "Entry saved and queued for AI processing."
+        }), 202
+
     except Exception as e:
         print(f"❌ Error creating entry: {e}")
         return jsonify({"error": "Failed to create entry"}), 500
-    finally:
-        if 'conn' in locals(): conn.close()
 
 @entry_bp.route('/all', methods=['GET'])
 @jwt_required()
@@ -374,8 +370,8 @@ def bulk_delete_entries():
 @jwt_required()
 def bulk_import_entries():
     """
-    Process massive amounts of diary text - split it into individual entries,
-    extract dates, process each with AI, and save to database
+    Accept bulk text, split into entries, insert RAW rows only, return 202 immediately.
+    A background thread will later run AI and insert health_metrics.
     """
     try:
         family_id = get_jwt_identity()
@@ -383,113 +379,82 @@ def bulk_import_entries():
         data = request.get_json()
         bulk_text = data.get('text', '')
         user_id = data.get('user_id')
-        
+
         if not bulk_text.strip():
             return jsonify({"error": "No text provided for bulk import"}), 400
-        
         if not user_id:
             return jsonify({"error": "User ID is required"}), 400
-        
-        print(f"🚀 Starting bulk import processing...")
-        print(f"📄 Text length: {len(bulk_text)} characters")
-        
-        # Split the bulk text into individual entries
+
+        # Split
         entries = split_bulk_text_into_entries(bulk_text)
-        print(f"📝 Found {len(entries)} potential entries")
-        
-        if len(entries) == 0:
+        if not entries:
             return jsonify({"error": "No valid entries found in the text"}), 400
-        
+
+        # Insert RAW entries only (no AI yet)
         conn = get_db_connection()
         if not conn:
             return jsonify({"error": "Database connection failed"}), 500
-        
-        try:
-            cursor = conn.cursor(cursor_factory=RealDictCursor)
-            processed_entries = []
-            skipped_entries = []
-            
-            for i, entry_data in enumerate(entries):
-                try:
-                    entry_text = entry_data['text']
-                    entry_date = entry_data['date']
-                    
-                    print(f"🔄 Processing entry {i+1}/{len(entries)}: {entry_date}")
-                    
-                    # Skip very short entries (likely not real diary entries)
-                    if len(entry_text.strip()) < 20:
-                        skipped_entries.append(f"Entry {i+1}: Too short ({len(entry_text)} chars)")
-                        continue
-                    
-                    # Process with AI (same function as single entries)
-                    ai_data = extract_health_data_with_ai(entry_text)
-                    
-                    # Insert raw entry
-                    cursor.execute("""
-                        INSERT INTO raw_entries (user_id, entry_text, entry_date, created_at)
-                        VALUES (%s, %s, %s, %s)
-                        RETURNING id
-                    """, (user_id, entry_text, entry_date, datetime.now()))
-                    
-                    raw_entry_id = cursor.fetchone()['id']
-                    
-                    # Insert processed health metrics
-                    cursor.execute("""
-                        INSERT INTO health_metrics (
-                            user_id, raw_entry_id, entry_date, mood_score, energy_level,
-                            pain_level, sleep_quality, sleep_hours, stress_level,
-                            ai_confidence, created_at
-                        )
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (
-                        user_id, raw_entry_id, entry_date,
-                        ai_data.get('mood_score'), ai_data.get('energy_level'),
-                        ai_data.get('pain_level'), ai_data.get('sleep_quality'),
-                        ai_data.get('sleep_hours'), ai_data.get('stress_level'),
-                        ai_data.get('confidence', 0.0), datetime.now()
-                    ))
-                    
-                    processed_entries.append({
-                        'id': raw_entry_id,
-                        'date': entry_date.isoformat(),
-                        'text_preview': entry_text[:100] + "..." if len(entry_text) > 100 else entry_text,
-                        'ai_confidence': ai_data.get('confidence', 0.0)
-                    })
-                    
-                except Exception as e:
-                    print(f"❌ Error processing entry {i+1}: {e}")
-                    skipped_entries.append(f"Entry {i+1}: Processing error - {str(e)}")
-                    continue
-            
-            conn.commit()
-            
-            return jsonify({
-                "success": True,
-                "message": f"Bulk import completed successfully",
-                "total_found": len(entries),
-                "processed": len(processed_entries),
-                "skipped": len(skipped_entries),
-                "processed_entries": processed_entries[:10],  # First 10 for preview
-                "skipped_reasons": skipped_entries[:5],  # First 5 skip reasons
-                "processing_summary": {
-                    "avg_confidence": sum(e.get('ai_confidence', 0) for e in processed_entries) / len(processed_entries) if processed_entries else 0,
-                    "date_range": {
-                        "earliest": min(e['date'] for e in processed_entries) if processed_entries else None,
-                        "latest": max(e['date'] for e in processed_entries) if processed_entries else None
-                    }
-                }
+
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        # Security: ensure user belongs to family
+        cursor.execute("SELECT id FROM users WHERE id = %s AND family_id = %s", (user_id, family_id))
+        if not cursor.fetchone():
+            cursor.close(); conn.close()
+            return jsonify({"error": "Invalid user profile"}), 403
+
+        queued_items = []
+        skipped_entries = []
+
+        for i, entry_data in enumerate(entries, start=1):
+            entry_text = (entry_data.get('text') or '').strip()
+            entry_date = entry_data.get('date')
+
+            # Skip obviously too-short lines
+            if len(entry_text) < 20:
+                skipped_entries.append(f"Entry {i}: Too short ({len(entry_text)} chars)")
+                continue
+
+            # Insert raw entry
+            cursor.execute("""
+                INSERT INTO raw_entries (user_id, entry_text, entry_date, created_at)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id
+            """, (user_id, entry_text, entry_date, datetime.now()))
+            raw_entry_id = cursor.fetchone()['id']
+
+            queued_items.append({
+                "raw_entry_id": raw_entry_id,
+                "user_id": user_id,
+                "entry_date": entry_date,
+                "entry_text": entry_text
             })
-            
-        finally:
-            cursor.close()
-            conn.close()
-            
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        # Fire-and-forget background processing
+        if queued_items:
+            t = threading.Thread(
+                target=_process_entries_async,
+                args=(queued_items,),
+                daemon=True
+            )
+            t.start()
+
+        return jsonify({
+            "success": True,
+            "message": "Bulk import received. Entries queued for AI processing.",
+            "total_found": len(entries),
+            "queued": len(queued_items),
+            "skipped": len(skipped_entries),
+            "skipped_reasons": skipped_entries[:5]
+        }), 202
+
     except Exception as e:
         print(f"❌ Error in bulk import: {e}")
-        return jsonify({
-            "success": False,
-            "error": f"Bulk import failed: {str(e)}"
-        }), 500
+        return jsonify({"success": False, "error": f"Bulk import failed: {str(e)}"}), 500
 
 def split_bulk_text_into_entries(bulk_text):
     """
@@ -950,105 +915,94 @@ If information is not mentioned or unclear, use null for numbers and empty array
 
     return base_prompt
 
+def _process_entries_async(items):
+    """
+    Daemon thread: for each queued raw entry
+    - run extract_health_data_with_ai
+    - write health_metrics
+    - be resilient to transient errors
+    """
+    print(f"🧵 Async processor started for {len(items)} entries")
+    for idx, it in enumerate(items, start=1):
+        conn = None
+        cursor = None
+        try:
+            user_id = it["user_id"]
+            entry_date = it.get("entry_date")
+            raw_entry_id = it["raw_entry_id"]
+            entry_text = it["entry_text"]
 
+            # Normalize date
+            if isinstance(entry_date, str):
+                entry_date = datetime.fromisoformat(entry_date).date()
+            if entry_date is None:
+                entry_date = datetime.utcnow().date()
 
-# used in the new frontend
-@entry_bp.route('/bulk-import/new', methods=['POST'])
-@jwt_required()
-def bulk_import_entry():
-    try:
-        family_id = get_jwt_identity()
-        conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-
-        user_id = request.form.get('user_id') or request.json.get('user_id')
-        file = request.files.get('file')
-        file_type = request.form.get('file_type') or 'txt'
-        text_data = request.json.get('text') if not file else None
-
-        if not user_id:
-            return jsonify({"success": False, "message": "user_id is required"}), 400
-
-        cursor.execute("SELECT id FROM users WHERE id = %s AND family_id = %s", (user_id, family_id))
-        if not cursor.fetchone():
-            return jsonify({"success": False, "message": "Invalid user profile"}), 403
-
-        entries = []
-
-        # 📁 File upload (txt or csv)
-        if file:
-            content = file.read().decode('utf-8')
-
-            if file_type == 'csv':
-                import csv
-                from io import StringIO
-                reader = csv.reader(StringIO(content))
-                for row in reader:
-                    if row:
-                        entries.append(row[0].strip())
-            else:  # txt
-                entries = [line.strip() for line in content.splitlines() if line.strip()]
-
-        # 📄 Raw JSON text
-        elif text_data:
-            entries = [line.strip() for line in text_data.strip().split('\n') if line.strip()]
-
-        else:
-            return jsonify({"success": False, "message": "No data provided"}), 400
-
-        if not entries:
-            return jsonify({"success": False, "message": "No valid entries found"}), 400
-
-        from server.analysis.openai_analysis import analyze_entry  # adjust if path differs
-        inserted_count = 0
-
-        for entry_text in entries:
-            try:
-                # Insert into raw_entries
-                cursor.execute(
-                    """INSERT INTO raw_entries (entry_text, entry_date, user_id, created_at)
-                       VALUES (%s, CURRENT_DATE, %s, CURRENT_TIMESTAMP)
-                       RETURNING id""",
-                    (entry_text, user_id)
-                )
-                raw_entry_id = cursor.fetchone()['id']
-
-                # Run AI analysis
-                metrics = analyze_entry(entry_text)
-
-                # Insert into health_metrics
-                cursor.execute(
-                    """INSERT INTO health_metrics (
-                        raw_entry_id, mood_score, energy_level, pain_level,
-                        sleep_quality, sleep_hours, stress_level, ai_confidence
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
-                    (
-                        raw_entry_id,
-                        metrics.get("mood_score"),
-                        metrics.get("energy_level"),
-                        metrics.get("pain_level"),
-                        metrics.get("sleep_quality"),
-                        metrics.get("sleep_hours"),
-                        metrics.get("stress_level"),
-                        metrics.get("ai_confidence"),
-                    )
-                )
-                inserted_count += 1
-
-            except Exception as e:
-                print(f"❌ Error processing entry: {e}")
+            # Retry AI a couple of times (transient failures)
+            ai = None
+            for attempt in range(3):
+                try:
+                    ai = extract_health_data_with_ai(entry_text, user_id=user_id, entry_date=entry_date)
+                    break
+                except Exception as ai_err:
+                    wait = 0.5 * (2 ** attempt)  # 0.5s, 1s, 2s
+                    print(f"⚠️ AI attempt {attempt+1}/3 failed for raw_entry_id={raw_entry_id}: {ai_err}. Retrying in {wait:.1f}s")
+                    time.sleep(wait)
+            if ai is None:
+                print(f"❌ AI failed after retries for raw_entry_id={raw_entry_id}; skipping metrics insert")
                 continue
 
-        conn.commit()
-        cursor.close()
-        conn.close()
+            # Fresh DB connection per item
+            conn = get_db_connection()
+            if not conn:
+                print("⚠️ Async: DB connection failed; skipping this item")
+                continue
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-        return jsonify({
-            "success": True,
-            "processed": inserted_count
-        })
+            cursor.execute("""
+                INSERT INTO health_metrics (
+                    user_id, raw_entry_id, entry_date, mood_score, energy_level,
+                    pain_level, sleep_quality, sleep_hours, stress_level,
+                    ai_confidence, created_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (raw_entry_id) DO NOTHING
+            """, (
+                user_id,
+                raw_entry_id,
+                entry_date,
+                ai.get('mood_score'),
+                ai.get('energy_level'),
+                ai.get('pain_level'),
+                ai.get('sleep_quality'),
+                ai.get('sleep_hours'),
+                ai.get('stress_level'),
+                ai.get('confidence', 0.0),
+                datetime.utcnow()
+            ))
 
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"success": False, "message": "Internal error", "details": str(e)}), 500
+            conn.commit()
+            print(f"✅ Async processed {idx}/{len(items)} (raw_entry_id={raw_entry_id})")
+
+            # gentle pacing to avoid rate limits; tune as needed
+            time.sleep(0.2)
+
+        except Exception as e:
+            print(f"❌ Async processing error for raw_entry_id={it.get('raw_entry_id')}: {e}")
+            try:
+                if conn:
+                    conn.rollback()
+            except Exception:
+                pass
+        finally:
+            try:
+                if cursor:
+                    cursor.close()
+            except Exception:
+                pass
+            try:
+                if conn:
+                    conn.close()
+            except Exception:
+                pass
+
+    print("🧵 Async processor finished")
