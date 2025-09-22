@@ -11,6 +11,7 @@ server/dist/
 # Environment variables
 .env
 .env.dev
+server/.env.dev
 .env.prod
 .env.local
 .env.test

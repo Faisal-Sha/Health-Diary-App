@@ -1,0 +1,16 @@
+# Global ignores for docker build contexts
+.git
+.gitignore
+**/__pycache__
+**/*.py[cod]
+**/*.log
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.coverage
+**/node_modules
+**/build
+**/dist
+**/.venv
+.env*
+*.sqlite3

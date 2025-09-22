@@ -21,6 +21,15 @@ A revolutionary health tracking application that combines GPT-4 artificial intel
 - **Containerization**: Docker, Docker Compose.
 - **CI/CD**: GitHub Actions with Docker Hub & DigitalOcean Deployment.
 
+### 📦 Dockerfile Locations
+- **Backend (Flask API)**
+  - Production: `server/Dockerfile.prod`
+  - Development: `server/Dockerfile.dev`
+  - Testing: `server/Dockerfile.test`
+- **Frontend (React App)**
+  - Production: `client/Dockerfile.prod`
+  - Development: `client/Dockerfile.dev`
+
 Built for academic demonstration of advanced software engineering concepts.
 
 ---
@@ -40,6 +49,13 @@ This project uses Docker for both development and testing. Follow these steps to
 - Create a **.env** file from **.env.sample** and update the values.
 
 ### **2. Setup Development Environment**
+Before starting the containers, copy the backend environment template and adjust it for your machine:
+
+```bash
+cp server/.env.dev.example server/.env.dev
+# Edit server/.env.dev to add your local secrets if needed
+```
+
 A script **setup-dev.sh** is included to automate environment setup for new developers:
 ```bash
 chmod +x setup-dev.sh
@@ -65,6 +81,42 @@ Helpful Makefile Commands:
 - make dev-logs — View container logs.
 
 - make dev-rebuild — Rebuild and restart dev environment.
+
+Prefer to run Docker Compose directly? The script wraps the following command:
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+---
+
+## 🐳 Run the full stack with Docker Compose
+
+If you want to try the production build locally, a top-level `docker-compose.yml` is available.
+
+1. Copy the sample environment file and update the values as needed:
+
+   ```bash
+   cp .env.example .env
+   # Edit .env to add secrets such as OPENAI_API_KEY
+   ```
+
+2. Build and start the containers:
+
+   ```bash
+   docker compose up --build
+   ```
+
+   - Frontend: http://localhost:3000 (served by Nginx)
+   - Backend API: http://localhost:5000
+
+3. Stop the stack when you are done:
+
+   ```bash
+   docker compose down
+   ```
+
+The compose configuration builds the React frontend with the `REACT_APP_API_URL` value from `.env` and runs the Flask API with the same settings you use in production. A PostgreSQL container is included automatically.
 
 # Testing Guide
 
